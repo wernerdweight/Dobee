@@ -143,9 +143,6 @@ class Provider {
 		$types[] = $this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName));
 		$params[] = $this->resolveValue($entityName,$this->getPrimaryKeyForEntity($entityName),$entity->getPrimaryKey());
 
-		echo $query;
-		print_r($params);
-
 		/// execute update
 		$this->execute($query,$types,$params);
 	}
