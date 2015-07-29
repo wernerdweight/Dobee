@@ -34,6 +34,16 @@ class Provider {
 		$join = $this->getJoins($options);
 		/// where
 		$where = $this->getWhere($entityName,$options,$types,$params);
+		/// add PK to the where clause
+		if(strlen($where) <= 0){
+			$where .= " WHERE";
+		}
+		else{
+			$where .= " AND";
+		}
+		$where .= " this.`".Transformer::camelCaseToUnderscore($this->getPrimaryKeyForEntity($entityName))."` = ?";
+		$types[] = $this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName));
+		$params[] = $this->resolveValue($entityName,$this->getPrimaryKeyForEntity($entityName),$primaryKey);
 		/// order
 		$order = $this->getOrderBy($options);
 		/// limit
@@ -81,25 +91,157 @@ class Provider {
 	}
 
 	public function delete($entity){
-		if(method_exists($entity,'delete')){
-			$entity->delete();
-			$this->update($entity);
-		}
-		else{
-			$this->doDelete($entity);
+		if(!is_null($entity)){
+			if(method_exists($entity,'delete')){
+				$entity->delete();
+				$this->update($entity);
+			}
+			else{
+				$this->doDelete($entity);
+			}
 		}
 	}
 
 	protected function doUpdate($entity){
+		$types = array();
+		$params = array();
 
+		$entityName = $this->getEntityName($entity);
+
+		$query = "UPDATE `".Transformer::smurf(Transformer::camelCaseToUnderscore($entityName))."` SET ";
+		$query .= $this->getSaveQueryBody($entity,$entityName,$types,$params);
+		$query .= " WHERE `".Transformer::camelCaseToUnderscore($this->getPrimaryKeyForEntity($entityName))."` = ?";
+		$types[] = $this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName));
+		$params[] = $this->resolveValue($entityName,$this->getPrimaryKeyForEntity($entityName),$entity->getPrimaryKey());
+
+		/// execute update
+		$this->execute($query,$types,$params);
 	}
 
 	protected function doInsert($entity){
+		$types = array();
+		$params = array();
 
+		$entityName = $this->getEntityName($entity);
+
+		$query = "INSERT INTO `".Transformer::smurf(Transformer::camelCaseToUnderscore($entityName))."` SET ";
+		$query .= $this->getSaveQueryBody($entity,$entityName,$types,$params);
+
+		/// execute update
+		$this->execute($query,$types,$params);
+		$entity->setPrimaryKey($this->connection->insert_id);
 	}
 
 	protected function doDelete($entity){
+		$types = array();
+		$params = array();
 
+		$entityName = $this->getEntityName($entity);
+
+		$query = "DELETE FROM `".Transformer::smurf(Transformer::camelCaseToUnderscore($entityName))."`";
+		$query .= " WHERE `".Transformer::camelCaseToUnderscore($this->getPrimaryKeyForEntity($entityName))."` = ?";
+		$types[] = $this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName));
+		$params[] = $this->resolveValue($entityName,$this->getPrimaryKeyForEntity($entityName),$entity->getPrimaryKey());
+
+		echo $query;
+		print_r($params);
+
+		/// execute update
+		$this->execute($query,$types,$params);
+	}
+
+	protected function getSaveQueryBody($entity,$entityName,&$types,&$params){
+		$query = "";
+
+		$properties = $this->getEntityProperties($entityName);
+		if(count($properties)){
+			foreach ($properties as $property) {
+				if($this->getPrimaryKeyForEntity($entityName) == $property) continue;
+				if(!is_null($entity->{'get'.ucfirst($property)}())){
+					$query .= "`".Transformer::camelCaseToUnderscore($property)."` = ?, ";
+					$types[] = $this->resolvePropertyStatementType($entityName,$property);
+					$params[] = $this->resolveValue($entityName,$property,$entity->{'get'.ucfirst($property)}());
+				}
+			}
+		}
+
+		$relations = $this->getEntityRelations($entityName);
+		if(count($relations)){
+			foreach ($relations as $relatedEntity => $cardinality) {
+				if(in_array($cardinality,array('<<ONE_TO_ONE','MANY_TO_ONE'))){
+					if(!is_null($entity->{'get'.ucfirst($relatedEntity)}())){
+						$query .= "`".Transformer::camelCaseToUnderscore($relatedEntity)."_id` = ?, ";
+						$types[] = $this->resolvePropertyStatementType($relatedEntity,$this->getPrimaryKeyForEntity($relatedEntity));
+						$params[] = $this->resolveValue($relatedEntity,$this->getPrimaryKeyForEntity($relatedEntity),$entity->{'get'.ucfirst($relatedEntity)}()->getPrimaryKey());
+					}
+				}
+				else{	/// many-to-many owning side
+					/// fetch current relations from database
+					$currentRelationsResult = $this->execute(
+						"SELECT * FROM `".Transformer::smurf(Transformer::camelCaseToUnderscore($entityName).'_mtm_'.Transformer::camelCaseToUnderscore($relatedEntity))."` WHERE ".Transformer::camelCaseToUnderscore($entityName)."_id = ?",
+						array(
+							$this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName))
+						),
+						array(
+							$entity->getPrimaryKey()
+						)
+					);
+					$currentRelations = array();
+					while ($rowData = $currentRelationsResult->fetch_assoc()) {
+						$currentRelations[$rowData[Transformer::camelCaseToUnderscore($relatedEntity).'_id']] = $rowData[Transformer::camelCaseToUnderscore($relatedEntity).'_id'];
+					}
+					/// get relations as set during business logic operation
+					$notPersistedRelations = array();
+					if(count($entity->{'get'.ucfirst(Transformer::pluralize($relatedEntity))}())){
+						foreach ($entity->{'get'.ucfirst(Transformer::pluralize($relatedEntity))}() as $key => $relatedItem) {
+							$notPersistedRelations[$relatedItem->getPrimaryKey()] = $relatedItem->getPrimaryKey();
+						}
+					}
+					/// check for removed relations (and remove them from database)
+					if(count($currentRelations)){
+						foreach ($currentRelations as $key => $id) {
+							if(!array_key_exists($id,$notPersistedRelations)){
+								$this->execute(
+									"DELETE FROM `".Transformer::smurf(Transformer::camelCaseToUnderscore($entityName).'_mtm_'.Transformer::camelCaseToUnderscore($relatedEntity))."` WHERE ".Transformer::camelCaseToUnderscore($entityName)."_id = ? AND ".Transformer::camelCaseToUnderscore($relatedEntity)."_id = ?",
+									array(
+										$this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName)),
+										$this->resolvePropertyStatementType($relatedEntity,$this->getPrimaryKeyForEntity($relatedEntity))
+									),
+									array(
+										$entity->getPrimaryKey(),
+										$key
+									)
+								);
+							}
+						}
+					}
+					/// check for new relations (and add them to database)
+					if(count($notPersistedRelations)){
+						foreach ($notPersistedRelations as $key => $id) {
+							if(!array_key_exists($id,$currentRelations)){
+								$this->execute(
+									"INSERT INTO `".Transformer::smurf(Transformer::camelCaseToUnderscore($entityName).'_mtm_'.Transformer::camelCaseToUnderscore($relatedEntity))."` SET ".Transformer::camelCaseToUnderscore($entityName)."_id = ?, ".Transformer::camelCaseToUnderscore($relatedEntity)."_id = ?",
+									array(
+										$this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName)),
+										$this->resolvePropertyStatementType($relatedEntity,$this->getPrimaryKeyForEntity($relatedEntity))
+									),
+									array(
+										$entity->getPrimaryKey(),
+										$key
+									)
+								);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		if(strlen($query) > 0){
+			$query = substr($query,0,-2);
+		}
+
+		return $query;
 	}
 
 	protected function resolveOperation($operator){
@@ -124,9 +266,9 @@ class Provider {
 				case 'bool': return intval($value);
 				case 'int': return intval($value);
 				case 'float': return doubleval($value);
-				case 'string': return "'".$value."'";
-				case 'text': return "'".$value."'";
-				case 'datetime': return ($value == 'CURRENT_TIMESTAMP' ? "CURRENT_TIMESTAMP" : "'".$value."'");
+				case 'string': return $value;
+				case 'text': return $value;
+				case 'datetime': return $value;
 				default: throw new InvalidPropertyTypeException('"'.$this->model[$entityName]['properties'][$property]['type'].'" is not a valid property type!');
 			}
 		}
@@ -137,7 +279,7 @@ class Provider {
 			switch ($type) {
 				case 'i': return intval($value);
 				case 'd': return doubleval($value);
-				case 's': return "'".$value."'";
+				case 's': return $value;
 				default: throw new InvalidPropertyTypeException('"'.$this->model[$entityName]['properties'][$property]['type'].'" is not a valid property type!');
 			}
 		}
@@ -308,6 +450,7 @@ class Provider {
 										'where' => array(
 											'this.'.Transformer::camelCaseToUnderscore($entityName).'_id' => array(
 												'operator' => 'eq',
+												'type' => $this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName)),
 												'value' => $entity->{'get'.ucfirst($this->getPrimaryKeyForEntity($entityName))}()
 											)
 										)
@@ -334,7 +477,7 @@ class Provider {
 										'where' => array(
 											$relatedEntity.'.'.Transformer::camelCaseToUnderscore($entityName).'_id' => array(
 												'operator' => 'eq',
-												'type' => 'i',
+												'type' => $this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName)),
 												'value' => $entity->{'get'.ucfirst($this->getPrimaryKeyForEntity($entityName))}()
 											)
 										)

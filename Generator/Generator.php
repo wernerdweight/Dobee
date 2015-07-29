@@ -62,7 +62,6 @@ class Generator {
 			}
 		}
 		if(in_array('--force',$options)){
-			$this->generateEntities();
 			if(strlen($this->tableSql) || strlen($this->primarySql) || strlen($this->relationSql)){
 				$this->force();
 				$this->generateEntities();
@@ -404,6 +403,14 @@ class Generator {
 							$body .= "\t\t/// check that items are loaded (if not load them)\n";
 							$body .= "\t\t\$this->load".ucfirst(Transformer::pluralize($relatedEntity))."();\n\n";
 							$body .= "\t\t\$this->".Transformer::pluralize($relatedEntity)."[\$".$relatedEntity."->get".ucfirst($this->getPrimaryKeyForEntity($relatedEntity))."()] = \$".$relatedEntity.";\n";
+							$body .= "\t\treturn \$this;\n";
+							$body .= "\t}\n\n";
+							$body .= "\tpublic function remove".ucfirst($relatedEntity)."(".ucfirst($relatedEntity)." \$".$relatedEntity."){\n";
+							$body .= "\t\t/// check that items are loaded (if not load them)\n";
+							$body .= "\t\t\$this->load".ucfirst(Transformer::pluralize($relatedEntity))."();\n\n";
+							$body .= "\t\tif(isset(\$this->".Transformer::pluralize($relatedEntity)."[\$".$relatedEntity."->get".ucfirst($this->getPrimaryKeyForEntity($relatedEntity))."()])){\n";
+							$body .= "\t\t\tunset(\$this->".Transformer::pluralize($relatedEntity)."[\$".$relatedEntity."->get".ucfirst($this->getPrimaryKeyForEntity($relatedEntity))."()]);\n";
+							$body .= "\t\t}\n";
 							$body .= "\t\treturn \$this;\n";
 							$body .= "\t}\n\n";
 							$body .= "\tpublic function set".ucfirst(Transformer::pluralize($relatedEntity))."(\$".Transformer::pluralize($relatedEntity)."){\n";

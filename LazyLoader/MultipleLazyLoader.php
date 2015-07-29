@@ -28,7 +28,7 @@ class MultipleLazyLoader {
             }
         }
         else{
-        	$this->entity->{'set'.ucfirst(ucfirst(Transformer::pluralize($this->entityName)))}(null);
+        	$this->entity->{'set'.ucfirst(ucfirst(Transformer::pluralize($this->entityName)))}(array());
         }
     }
 
