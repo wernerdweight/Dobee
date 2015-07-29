@@ -1,14 +1,14 @@
 {
-    "name":        "wernerdweight/image-manager-bundle",
-    "type":        "symfony-bundle",
-    "description": "Support for image resizing, cropping and encrypting in Symfony2.",
+    "name":        "wernerdweight/dobee",
+    "type":        "library",
+    "description": "PHP utility for handling your application's model",
     "keywords":    [
-        "image",
-        "resize",
-        "crop",
-        "encrypt"
+        "database",
+        "model",
+        "generate database",
+        "generate model"
     ],
-    "homepage":    "https://github.com/wernerdweight/wdImageManagerBundle",
+    "homepage":    "https://github.com/wernerdweight/Dobee",
     "license":     "MIT",
 
     "authors": [
@@ -20,7 +20,6 @@
 
     "require": {
         "php":                          ">=5.3.3",
-        "symfony/framework-bundle":     "~2.3"
     },
 
     "require-dev": {},
@@ -29,15 +28,15 @@
 
     "autoload": {
         "psr-0": {
-            "WernerDweight\\ImageManagerBundle\\": ""
+            "WernerDweight\\Dobee\\": ""
         }
     },
 
-    "target-dir": "WernerDweight/ImageManagerBundle",
+    "target-dir": "WernerDweight/Dobee",
 
     "extra": {
         "branch-alias": {
-            "dev-master": "0.2-dev"
+            "dev-master": "0.1-dev"
         }
     }
 }
