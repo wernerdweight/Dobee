@@ -31,4 +31,16 @@ class Transformer {
 		return Inflect::singularize($string);
 	}
 
+	public static function strip($string){
+		/// get position of the separating dot
+		$pos = intval(strpos($string,'.'));
+		/// if there is a dot, strip string
+		if($pos > 0){
+			return substr($string,$pos+1);
+		}
+		else{
+			return $string;
+		}
+	}
+
 }

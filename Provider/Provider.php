@@ -363,12 +363,14 @@ class Provider {
 
 		if(isset($options['join']) && is_array($options['join'])){
 			foreach ($options['join'] as $relatedEntity => $name) {
-				$join .= " JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntity))." ".$name." ON this.".Transformer::camelCaseToUnderscore($relatedEntity)."_id = ".$name.".".$this->getPrimaryKeyForEntity($relatedEntity);
+				$relatedEntityStripped = Transformer::strip($relatedEntity);
+				$join .= " JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".$name." ON this.".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".$name.".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
 			}
 		}
 		if(isset($options['leftJoin']) && is_array($options['leftJoin'])){
 			foreach ($options['leftJoin'] as $relatedEntity => $name) {
-				$join .= " LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntity))." ".$name." ON this.".Transformer::camelCaseToUnderscore($relatedEntity)."_id = ".$name.".".$this->getPrimaryKeyForEntity($relatedEntity);
+				$relatedEntityStripped = Transformer::strip($relatedEntity);
+				$join .= " LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".$name." ON this.".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".$name.".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
 			}
 		}
 		if(isset($options['plainJoin']) && is_array($options['plainJoin'])){
@@ -392,15 +394,7 @@ class Provider {
 			$whereClauses = array();
 			foreach ($options['where'] as $property => $settings) {
 				$whereClauses[] = $property." ".$this->resolveOperation($settings['operator'])." ?";
-				/// get position of the separating dot
-				$pos = intval(strpos($property,'.'));
-				/// if there is a dot, strip string to only represent property
-				if($pos > 0){
-					$propertyStripped = substr($property,$pos+1);
-				}
-				else{
-					$propertyStripped = $property;
-				}
+				$propertyStripped = Transformer::strip($property);
 				$types[] = isset($settings['type']) ? $settings['type'] : $this->resolvePropertyStatementType($entityName,$propertyStripped);
 				$params[] = $this->resolveValue($entityName,$propertyStripped,$settings['value'],isset($settings['type']) ? $settings['type'] : null);
 			}
