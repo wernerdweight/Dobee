@@ -24,7 +24,7 @@ class Provider {
 		$this->model = $model;
 	}
 
-	public function fetchOne($entityName,$primaryKey,$options = array()){
+	public function fetchOne($entityName,$primaryKey = null,$options = array()){
 		$types = array();
 		$params = array();
 
@@ -35,15 +35,17 @@ class Provider {
 		/// where
 		$where = $this->getWhere($entityName,$options,$types,$params);
 		/// add PK to the where clause
-		if(strlen($where) <= 0){
-			$where .= " WHERE";
+		if(!is_null($primaryKey)){
+			if(strlen($where) <= 0){
+				$where .= " WHERE";
+			}
+			else{
+				$where .= " AND";
+			}
+			$where .= " this.`".Transformer::camelCaseToUnderscore($this->getPrimaryKeyForEntity($entityName))."` = ?";
+			$types[] = $this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName));
+			$params[] = $this->resolveValue($entityName,$this->getPrimaryKeyForEntity($entityName),$primaryKey);
 		}
-		else{
-			$where .= " AND";
-		}
-		$where .= " this.`".Transformer::camelCaseToUnderscore($this->getPrimaryKeyForEntity($entityName))."` = ?";
-		$types[] = $this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName));
-		$params[] = $this->resolveValue($entityName,$this->getPrimaryKeyForEntity($entityName),$primaryKey);
 		/// order
 		$order = $this->getOrderBy($options);
 		/// limit
