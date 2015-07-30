@@ -22,8 +22,8 @@ class MultipleLazyLoader {
 	public function loadData(){
         $data = $this->provider->fetch($this->entityName,$this->options);
         if(is_array($data) && count($data)){
+            $this->entity->{'set'.ucfirst(ucfirst(Transformer::pluralize($this->entityName)))}(array());
             foreach ($data as $item) {
-                $this->entity->{'set'.ucfirst(ucfirst(Transformer::pluralize($this->entityName)))}(array());
                 $this->entity->{'add'.ucfirst($this->entityName)}($item);
             }
         }
