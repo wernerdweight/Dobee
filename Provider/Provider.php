@@ -392,8 +392,17 @@ class Provider {
 			$whereClauses = array();
 			foreach ($options['where'] as $property => $settings) {
 				$whereClauses[] = $property." ".$this->resolveOperation($settings['operator'])." ?";
-				$types[] = isset($settings['type']) ? $settings['type'] : $this->resolvePropertyStatementType($entityName,$property);
-				$params[] = $this->resolveValue($entityName,$property,$settings['value'],isset($settings['type']) ? $settings['type'] : null);
+				/// get position of the separating dot
+				$pos = intval(strpos($property,'.'));
+				/// if there is a dot, strip string to only represent property
+				if($pos > 0){
+					$propertyStripped = substr($property,$pos+1);
+				}
+				else{
+					$propertyStripped = $property;
+				}
+				$types[] = isset($settings['type']) ? $settings['type'] : $this->resolvePropertyStatementType($entityName,$propertyStripped);
+				$params[] = $this->resolveValue($entityName,$propertyStripped,$settings['value'],isset($settings['type']) ? $settings['type'] : null);
 			}
 			$where .= " WHERE ".implode(" AND ",$whereClauses);
 		}
