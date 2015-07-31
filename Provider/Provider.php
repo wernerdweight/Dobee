@@ -53,8 +53,9 @@ class Provider {
 		/// fetch result
 		$result = $this->execute($select.$join.$where.$order.$limit,$types,$params);
 
-		$entityData = $result->fetch_assoc();
-		$entity = $this->hydrateEntity($entityName,$entityData);
+		//$entityData = $result->fetch_assoc();
+		$entity = $this->hydrateEntity($entityName,$result[0]);
+
 		return $entity;
 	}
 
@@ -76,8 +77,10 @@ class Provider {
 		$result = $this->execute($select.$join.$where.$order.$limit,$types,$params);
 
 		$results = array();
-		while ($rowData = $result->fetch_assoc()) {
-			$results[$rowData[Transformer::camelCaseToUnderscore($this->getPrimaryKeyForEntity($entityName))]] = $this->hydrateEntity($entityName,$rowData);
+		if(is_array($result) && count($result)){
+			foreach ($result as $key => $rowData) {
+				$results[$rowData[Transformer::camelCaseToUnderscore($this->getPrimaryKeyForEntity($entityName))]] = $this->hydrateEntity($entityName,$rowData);
+			}
 		}
 
 		return $results;
@@ -326,10 +329,38 @@ class Provider {
 			throw new DatabaseException("Query failed: (".$statement->errno.") ".$statement->error);
 		}
 		/// get result
-		$result = $statement->get_result();
+		$result = $this->getResult($statement);
 		/// close statement
 		$statement->close();
 		
+		return $result;
+	}
+
+	protected function getResult(\mysqli_stmt $statement){
+		
+		$metadata = $statement->result_metadata();
+		if($metadata === false){
+			if($statement->errno === 0){	/// DELETE / INSERT / DROP / ...
+				return null;
+			}
+			else throw new DatabaseException("Query failed: (".$statement->errno.") ".$statement->error);
+		}
+
+		$row = array();
+		while($field = $metadata->fetch_field()){
+			$params[] = &$row[$field->name];
+		}
+
+		call_user_func_array(array($statement,'bind_result'),$params);
+
+		while($statement->fetch()){
+			$columns = array();
+			foreach($row as $key => $val){
+				$columns[$key] = $val;
+			}
+			$result[] = $columns;
+		}
+
 		return $result;
 	}
 
