@@ -53,10 +53,11 @@ class Provider {
 		/// fetch result
 		$result = $this->execute($select.$join.$where.$order.$limit,$types,$params);
 
-		//$entityData = $result->fetch_assoc();
-		$entity = $this->hydrateEntity($entityName,$result[0]);
+		if(is_array($result) && count($result)){
+			return $this->hydrateEntity($entityName,$result[0]);
+		}
 
-		return $entity;
+		return null;
 	}
 
 	public function fetch($entityName,$options = array()){
@@ -189,8 +190,10 @@ class Provider {
 						)
 					);
 					$currentRelations = array();
-					while ($rowData = $currentRelationsResult->fetch_assoc()) {
-						$currentRelations[$rowData[Transformer::camelCaseToUnderscore($relatedEntity).'_id']] = $rowData[Transformer::camelCaseToUnderscore($relatedEntity).'_id'];
+					if(is_array($currentRelationsResult) && count($currentRelationsResult)){
+						foreach ($currentRelationsResult as $rowData) {
+							$currentRelations[$rowData[Transformer::camelCaseToUnderscore($relatedEntity).'_id']] = $rowData[Transformer::camelCaseToUnderscore($relatedEntity).'_id'];
+						}
 					}
 					/// get relations as set during business logic operation
 					$notPersistedRelations = array();
@@ -352,6 +355,8 @@ class Provider {
 		}
 
 		call_user_func_array(array($statement,'bind_result'),$params);
+
+		$result = array();
 
 		while($statement->fetch()){
 			$columns = array();
