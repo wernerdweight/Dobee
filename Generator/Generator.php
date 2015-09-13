@@ -116,7 +116,7 @@ class Generator {
 							}
 							/// foreign key
 							else if($properties['Key'] == 'MUL'){
-								$this->relationSql .= "ALTER TABLE `".$table."` ADD CONSTRAINT `FK_".$table."_".preg_replace('/_id$/','',$properties['Field'])."` FOREIGN KEY (`".$properties['Field']."`) REFERENCES `".preg_replace('/_id$/','',$properties['Field'])."` (`id`);\n";
+								$this->relationSql .= "ALTER TABLE `".$table."` ADD CONSTRAINT `FK_".$table."_".preg_replace('/_id$/','',$properties['Field'])."` FOREIGN KEY (`".$properties['Field']."`) REFERENCES `".Transformer::smurf(preg_replace('/_id$/','',$properties['Field']))."` (`id`);\n";
 								$this->relationSql .= "\n";
 							}
 						}
