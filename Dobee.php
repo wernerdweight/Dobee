@@ -4,7 +4,6 @@ namespace WernerDweight\Dobee;
 
 use Symfony\Component\Yaml\Yaml;
 
-use WernerDweight\Dobee\Exception\ConfigurationFileNotFoundException;
 use WernerDweight\Dobee\Exception\ConnectionException;
 use WernerDweight\Dobee\Exception\InvalidConfigurationException;
 use WernerDweight\Dobee\Exception\InvalidModelConfigurationException;
@@ -42,10 +41,13 @@ class Dobee {
 
 	protected function loadConfiguration($configurationFilePath){
 		if(!is_file($configurationFilePath)){
-			throw new ConfigurationFileNotFoundException();
+			/// try to use given string as configuration file contents
+			$configurationFileContents = $configurationFilePath;
 		}
-		/// load contents of the configuration file
-		$configurationFileContents = file_get_contents($configurationFilePath);
+		else{
+			/// load contents of the configuration file
+			$configurationFileContents = file_get_contents($configurationFilePath);
+		}
 
 		try {
 			/// parse configuration
@@ -147,6 +149,8 @@ class Dobee {
 			'MANY_TO_ONE',
 			'MANY_TO_MANY',
 			'<<MANY_TO_MANY',
+			'SELF::MANY_TO_ONE',
+			'SELF::ONE_TO_MANY',
 		);
 	}
 
