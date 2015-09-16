@@ -241,7 +241,7 @@ class Generator {
 					case 'ONE_TO_MANY': break;		/// will be handled by MANY_TO_ONE
 					case 'ONE_TO_ONE': break;		/// will be handled by <<ONE_TO_ONE
 					case 'MANY_TO_MANY': break;		/// will be handled by <<MANY_TO_MANY
-					case '<<ONE_TO_ONE': case 'MANY_TO_ONE':
+					case '<<ONE_TO_ONE': case 'MANY_TO_ONE': case 'SELF::MANY_TO_ONE': case 'SELF::ONE_TO_MANY':
 						$this->tableSql .= "`".Transformer::camelCaseToUnderscore($entity)."_id` int(11) DEFAULT NULL,\n";
 						$this->relationSql .= "ALTER TABLE `".Transformer::smurf(Transformer::camelCaseToUnderscore($currentEntity))."` ADD CONSTRAINT `FK_".Transformer::smurf(Transformer::camelCaseToUnderscore($currentEntity))."_".Transformer::camelCaseToUnderscore($entity)."` FOREIGN KEY (`".Transformer::camelCaseToUnderscore($entity)."_id`) REFERENCES `".Transformer::smurf(Transformer::camelCaseToUnderscore($entity))."` (`".$this->getPrimaryKeyForEntity($entity)."`);\n";
 						$this->relationSql .= "\n";
@@ -391,6 +391,20 @@ class Generator {
 							$body .= "\t\treturn \$this->".$relatedEntity.";\n";
 							$body .= "\t}\n\n";
 							break;
+						case 'SELF::ONE_TO_MANY':
+						case 'SELF::MANY_TO_ONE':
+							/// declaration
+							$class .= "\tprotected \$parent".ucfirst($relatedEntity).";\n";
+							/// setter
+							$body .= "\tpublic function setParent".ucfirst($relatedEntity)."(\$parent".ucfirst($relatedEntity)."){\n";
+							$body .= "\t\t\$this->parent".ucfirst($relatedEntity)." = \$parent".ucfirst($relatedEntity).";\n";
+							$body .= "\t\treturn \$this;\n";
+							$body .= "\t}\n\n";
+							/// getter
+							$body .= "\tpublic function getParent".ucfirst($relatedEntity)."(){\n";
+							$body .= "\t\treturn \$this->parent".ucfirst($relatedEntity).";\n";
+							$body .= "\t}\n\n";
+							/// no break here as we also need the 'to-many' methods
 						case 'ONE_TO_MANY':
 						case 'MANY_TO_MANY':
 						case '<<MANY_TO_MANY':

@@ -114,6 +114,23 @@ model:
                 notNull: true
         relations:
             author: ONE_TO_ONE
+    image:
+        extends: content
+        properties:
+            path:
+                type: string
+                length: 255
+                notNull: true
+            filesize:
+                type: int
+                notNull: true
+        relations:
+            imageFolder: MANY_TO_ONE
+    imageFolder:
+        extends: content
+        relations:
+            image: ONE_TO_MANY
+            imageFolder: SELF::ONE_TO_MANY
 ```
 
 Usage
