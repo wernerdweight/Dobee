@@ -251,14 +251,14 @@ class Provider {
 
 	protected function resolveOperation($operator){
 		switch (strtolower($operator)) {
-			case '=': case 'eq': return '=';
-			case '!=': case 'neq': return '!=';
-			case '>': case 'gt': return '>';
-			case '>=': case 'gte': return '>=';
-			case '<': case 'lt': return '<';
-			case '<=': case 'lte': return '<=';
-			case '%%': case 'like': return 'LIKE';
-			case '~': case 'in': return 'IN';
+			case '=': case 'eq': return '= ?';
+			case '!=': case 'neq': return '!= ?';
+			case '>': case 'gt': return '> ?';
+			case '>=': case 'gte': return '>= ?';
+			case '<': case 'lt': return '< ?';
+			case '<=': case 'lte': return '<= ?';
+			case '%%': case 'like': return 'LIKE ?';
+			case '~': case 'in': return 'IN ?';
 			case '0': case 'null': return 'IS NULL';
 			case '!0': case 'nn': return 'IS NOT NULL';
 			default: throw new UnknownOperationException('Operator "'.$operator.'" is unknown!');
@@ -429,10 +429,13 @@ class Provider {
 		if(isset($options['where']) && is_array($options['where'])){
 			$whereClauses = array();
 			foreach ($options['where'] as $property => $settings) {
-				$whereClauses[] = $property." ".$this->resolveOperation($settings['operator'])." ?";
-				$propertyStripped = Transformer::strip($property);
-				$types[] = isset($settings['type']) ? $settings['type'] : $this->resolvePropertyStatementType($entityName,$propertyStripped);
-				$params[] = $this->resolveValue($entityName,$propertyStripped,$settings['value'],isset($settings['type']) ? $settings['type'] : null);
+				$clause = $property." ".$this->resolveOperation($settings['operator']);
+				$whereClauses[] = $clause;
+				if(strpos($clause,'?') !== false){
+					$propertyStripped = Transformer::strip($property);
+					$types[] = isset($settings['type']) ? $settings['type'] : $this->resolvePropertyStatementType($entityName,$propertyStripped);
+					$params[] = $this->resolveValue($entityName,$propertyStripped,$settings['value'],isset($settings['type']) ? $settings['type'] : null);
+				}
 			}
 			$where .= " WHERE ".implode(" AND ",$whereClauses);
 		}
