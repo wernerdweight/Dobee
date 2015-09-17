@@ -491,6 +491,9 @@ class Provider {
 												'type' => $this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName)),
 												'value' => $entity->{'get'.ucfirst($this->getPrimaryKeyForEntity($entityName))}()
 											)
+										),
+										'order' => array(
+											'this.'.Transformer::camelCaseToUnderscore($this->getDefaultOrderForEntity($relatedEntity)) => $this->getDefaultOrderForEntity($relatedEntity,false)
 										)
 									)
 								)
@@ -518,6 +521,9 @@ class Provider {
 												'type' => $this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName)),
 												'value' => $entity->{'get'.ucfirst($this->getPrimaryKeyForEntity($entityName))}()
 											)
+										),
+										'order' => array(
+											'this.'.Transformer::camelCaseToUnderscore($this->getDefaultOrderForEntity($relatedEntity)) => $this->getDefaultOrderForEntity($relatedEntity,false)
 										)
 									)
 								)

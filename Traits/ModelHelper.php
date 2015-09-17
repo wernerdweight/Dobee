@@ -65,4 +65,16 @@ trait ModelHelper {
 		return $relations;
 	}
 
+	protected function getDefaultOrderForEntity($entity,$returnProperty = true){
+		if(isset($this->model[$entity]['defaultOrderBy'])){
+			foreach ($this->model[$entity]['defaultOrderBy'] as $property => $direction) {
+				return $returnProperty === true ? $property : $direction;
+			}
+		}
+		else if(isset($this->model[$entity]['extends'])){
+			return $this->getDefaultOrderForEntity($this->model[$entity]['extends'],$returnProperty);
+		}
+		return $returnProperty === true ? $this->getPrimaryKeyForEntity($entity) : 'asc';
+	}
+
 }

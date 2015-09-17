@@ -60,6 +60,8 @@ model:
                 type: bool
                 notNull: true
                 default: 0
+        defaultOrderBy:
+            dateCreated: desc
     content:
         abstract: ~
         extends: base
@@ -97,6 +99,8 @@ model:
         relations:
             article: ONE_TO_MANY
             address: <<ONE_TO_ONE
+        defaultOrderBy:
+            lastName: asc
     address:
         extends: base
         properties:
