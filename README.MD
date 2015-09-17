@@ -17,7 +17,7 @@ Installation
 ```js
 	{
 	    "require": {
-	        "wernerdweight/dobee": "0.1.*@dev"
+	        "wernerdweight/dobee": "0.2.*@dev"
 	    }
 	}
 ```
