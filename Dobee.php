@@ -165,7 +165,12 @@ class Dobee {
 		/// check connection
 		if($this->connection->connect_error){
 			throw new ConnectionException('Connection failed: '.$this->connection->connect_error);
-		} 
+		}
+		/// set utf8 encoding
+		$this->connection->query("SET character_set_client=utf8");
+		$this->connection->query("SET collation_connection=utf8_unicode_ci");
+		$this->connection->query("SET character_set_connection=utf8");
+		$this->connection->query("SET character_set_results=utf8");
 	}
 
 	protected function initializeGenerator(){
