@@ -77,4 +77,14 @@ trait ModelHelper {
 		return $returnProperty === true ? $this->getPrimaryKeyForEntity($entity) : 'asc';
 	}
 
+	protected function isSoftDeletable($entity){
+		if(array_key_exists('softDeletable',$this->model[$entity])){
+			return true;
+		}
+		else if(isset($this->model[$entity]['extends'])){
+			return $this->isSoftDeletable($this->model[$entity]['extends']);
+		}
+		return false;
+	}
+
 }

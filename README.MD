@@ -46,6 +46,7 @@ db:
 model:
     base:
         abstract: ~
+        softDeletable: ~
         primary: id
         properties:
             id:

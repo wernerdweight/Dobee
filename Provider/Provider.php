@@ -46,6 +46,16 @@ class Provider {
 			$types[] = $this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName));
 			$params[] = $this->resolveValue($entityName,$this->getPrimaryKeyForEntity($entityName),$primaryKey);
 		}
+		/// if entity is soft-deletable add condition
+		if($this->isSoftDeletable($entityName) === true){
+			if(strlen($where) <= 0){
+				$where .= " WHERE";
+			}
+			else{
+				$where .= " AND";
+			}
+			$where .= " this.`deleted` = 0";
+		}
 		/// order
 		$order = $this->getOrderBy($options);
 		/// limit
@@ -70,6 +80,16 @@ class Provider {
 		$join = $this->getJoins($options);
 		/// where
 		$where = $this->getWhere($entityName,$options,$types,$params);
+		/// if entity is soft-deletable add condition
+		if($this->isSoftDeletable($entityName) === true){
+			if(strlen($where) <= 0){
+				$where .= " WHERE";
+			}
+			else{
+				$where .= " AND";
+			}
+			$where .= " this.`deleted` = 0";
+		}
 		/// order
 		$order = $this->getOrderBy($options);
 		/// limit
