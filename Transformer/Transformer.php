@@ -11,7 +11,7 @@ class Transformer {
 	}
 
 	public static function camelCaseToUnderscore($string){
-		preg_match_all('/([A-Z][A-Z0-9]*(?=$|[A-Z][a-z0-9])|[A-Za-z][a-z0-9]+)/',$string,$matches);
+		preg_match_all('/([A-Z\.][A-Z0-9\.]*(?=$|[A-Z\.][a-z0-9\.])|[A-Za-z\.][a-z0-9\.]+)/',$string,$matches);
 		$words = $matches[0];
 		foreach ($words as $key => $word) {
 			$words[$key] = ($word == strtoupper($word) ? strtolower($word) : lcfirst($word));
