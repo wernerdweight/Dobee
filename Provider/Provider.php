@@ -406,7 +406,7 @@ class Provider {
 		if(isset($options['order']) && is_array($options['order'])){
 			$orderClauses = array();
 			foreach ($options['order'] as $property => $direction) {
-				$orderClauses[] = $property." ".$this->resolveOrderDirection($direction);
+				$orderClauses[] = Transformer::camelCaseToUnderscore($property)." ".$this->resolveOrderDirection($direction);
 			}
 			$order .= " ORDER BY ".implode(", ",$orderClauses);
 		}
@@ -449,7 +449,7 @@ class Provider {
 		if(isset($options['where']) && is_array($options['where'])){
 			$whereClauses = array();
 			foreach ($options['where'] as $property => $settings) {
-				$clause = $property." ".$this->resolveOperation($settings['operator']);
+				$clause = Transformer::camelCaseToUnderscore($property)." ".$this->resolveOperation($settings['operator']);
 				$whereClauses[] = $clause;
 				if(strpos($clause,'?') !== false){
 					$propertyStripped = Transformer::strip($property);
