@@ -448,14 +448,43 @@ class Provider {
 
 		if(isset($options['where']) && is_array($options['where'])){
 			$whereClauses = array();
-			foreach ($options['where'] as $property => $settings) {
-				$clause = Transformer::camelCaseToUnderscore($property)." ".$this->resolveOperation($settings['operator']);
-				$whereClauses[] = $clause;
-				if(strpos($clause,'?') !== false){
-					$propertyStripped = Transformer::strip($property);
-					$types[] = isset($settings['type']) ? $settings['type'] : $this->resolvePropertyStatementType($entityName,$propertyStripped);
-					$params[] = $this->resolveValue($entityName,$propertyStripped,$settings['value'],isset($settings['type']) ? $settings['type'] : null);
+			foreach ($options['where'] as $propertyGroup => $settings) {
+				/// property group can be e.g. 'this.id' or 'this.id|this.active|this.title' where '|'' stands for logical OR
+				$properties = explode('|',$propertyGroup);
+				$operators = explode('|',$settings['operator']);
+				$values = explode('|',$settings['value']);
+				if(isset($settings['type'])){
+					$typesets = explode('|',$settings['type']);
 				}
+				else{
+					$typesets = null;
+				}
+				
+				$clause = "(";
+				foreach ($properties as $key => $property) {
+					if($clause !== "("){
+						$clause .= ' OR ';
+					}
+
+					$operator = count($operators) > 1 ? $operators[$key] : $operators[0];
+					$value = count($values) > 1 ? $values[$key] : $values[0];
+					if(null !== $typesets){
+						$type = count($typesets) > 1 ? $typesets[$key] : $typesets[0];
+					}
+					else{
+						$type = null;
+					}
+
+					$clause .= Transformer::camelCaseToUnderscore($property)." ".$this->resolveOperation($operator);
+					if(strpos($clause,'?') !== false){
+						$propertyStripped = Transformer::strip($property);
+						$types[] = null !== $type ? $type : $this->resolvePropertyStatementType($entityName,$propertyStripped);
+						$params[] = $this->resolveValue($entityName,$propertyStripped,$value,null !== $type ? $type : null);
+					}
+				}
+				$clause .= ")";
+
+				$whereClauses[] = $clause;
 			}
 			$where .= " WHERE ".implode(" AND ",$whereClauses);
 		}
