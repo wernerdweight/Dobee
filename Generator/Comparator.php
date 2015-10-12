@@ -87,7 +87,7 @@ class Comparator {
 					}
 					/// check if column exists in new schema
 					else if(!isset($this->newSchema[$table][$column])){
-						$diff['columns']['drop'][$table][] = $column;
+						$diff['columns']['drop'][$table][$column] = $properties;
 					}
 					else{
 						/// check differencies in columns' properties
