@@ -84,6 +84,52 @@ class Generator {
 		}
 	}
 
+	protected function generateColumnKeySql($table,$properties,$columns,&$relationSql,&$primarySql,&$tableSql){
+		/// primary key
+		if($properties['Key'] == 'PRI'){
+			/// if this table represents many-to-many relation, both columns must be set as PK
+			if(strpos($table,'_mtm_')){
+				$colNames = array_keys($columns);
+				$relationSql .= "ALTER TABLE `".$table."` ADD PRIMARY KEY (`".$colNames[0]."`,`".$colNames[1]."`), ADD KEY `IDX_".preg_replace('/_id$/','',$colNames[0])."_MTM_".preg_replace('/_id$/','',$colNames[1])."` (`".$colNames[0]."`), ADD KEY `IDX_".preg_replace('/_id$/','',$colNames[1])."_MTM_".preg_replace('/_id$/','',$colNames[0])."` (`".$colNames[1]."`);\n";
+				$relationSql .= "ALTER TABLE `".$table."`\n";
+				$relationSql .= "ADD CONSTRAINT `FK_".preg_replace('/_id$/','',$colNames[0])."_MTM_".preg_replace('/_id$/','',$colNames[1])."` FOREIGN KEY (`".$colNames[0]."`) REFERENCES `".Transformer::smurf(preg_replace('/_id$/','',$colNames[0]))."` (`id`),\n";
+				$relationSql .= "ADD CONSTRAINT `FK_".preg_replace('/_id$/','',$colNames[1])."_MTM_".preg_replace('/_id$/','',$colNames[0])."` FOREIGN KEY (`".$colNames[1]."`) REFERENCES `".Transformer::smurf(preg_replace('/_id$/','',$colNames[1]))."` (`id`);\n";
+				$relationSql .= "\n";
+				/// add sql for second column
+				$tableSql .= "`".$columns[$colNames[1]]['Field']."` ".$columns[$colNames[1]]['Type'].(isset($columns[$colNames[1]]['Null']) && $columns[$colNames[1]]['Null'] == 'NO' ? " NOT NULL" : "").(isset($columns[$colNames[1]]['Default']) ? " DEFAULT ".$columns[$colNames[1]]['Default'] : (isset($columns[$colNames[1]]['Null']) && $columns[$colNames[1]]['Null'] == 'NO' ? "" : " DEFAULT NULL")).",\n";
+				return 'break';	/// many-to-many table only has two columns
+			}
+			/// otherwise, use standard approach
+			else{
+				$primarySql .= "ALTER TABLE `".$table."` ADD PRIMARY KEY (`".$properties['Field']."`);\n";
+				$primarySql .= "ALTER TABLE `".$table."` MODIFY `".$properties['Field']."` ".$properties['Type']." NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=1;\n";
+				$primarySql .= "\n";
+			}
+		}
+		/// foreign key
+		else if($properties['Key'] == 'MUL'){
+			$relationSql .= "ALTER TABLE `".$table."` ADD CONSTRAINT `FK_".$table."_".preg_replace('/_id$/','',$properties['Field'])."` FOREIGN KEY (`".$properties['Field']."`) REFERENCES `".Transformer::smurf(preg_replace('/_id$/','',$properties['Field']))."` (`id`);\n";
+			$relationSql .= "\n";
+		}
+	}
+
+	protected function generateDropColumnKeySql($table,$properties,$columns,&$tableSql){
+		/// primary key
+		if($properties['Key'] == 'PRI'){
+			/// if this table represents many-to-many relation, both keys will be deleted on drop
+			/// otherwise, use standard approach
+			if(false === strpos($table,'_mtm_')){
+				$tableSql .= "ALTER TABLE `".$table."` DROP PRIMARY KEY (`".$properties['Field']."`);\n";
+				$tableSql .= "\n";
+			}
+		}
+		/// foreign key
+		else if($properties['Key'] == 'MUL'){
+			$tableSql .= "ALTER TABLE `".$table."` DROP FOREIGN KEY `FK_".$table."_".preg_replace('/_id$/','',$properties['Field'])."`;\n";
+			$tableSql .= "\n";
+		}
+	}
+
 	protected function getSqlFromDiff($diff){
 
 		if(count($diff['tables']['create'])){
@@ -97,31 +143,8 @@ class Generator {
 						$this->tableSql .= "`".$properties['Field']."` ".$properties['Type'].(isset($properties['Null']) && $properties['Null'] == 'NO' ? " NOT NULL" : "").(isset($properties['Default']) ? " DEFAULT ".$properties['Default'] : (isset($properties['Null']) && $properties['Null'] == 'NO' ? "" : " DEFAULT NULL")).",\n";
 						/// check if current column is a key
 						if(isset($properties['Key'])){
-							/// primary key
-							if($properties['Key'] == 'PRI'){
-								/// if this tambe represents many-to-many relation, both columns must be set as PK
-								if(strpos($table,'_mtm_')){
-									$colNames = array_keys($columns);
-									$this->relationSql .= "ALTER TABLE `".$table."` ADD PRIMARY KEY (`".$colNames[0]."`,`".$colNames[1]."`), ADD KEY `IDX_".preg_replace('/_id$/','',$colNames[0])."_MTM_".preg_replace('/_id$/','',$colNames[1])."` (`".$colNames[0]."`), ADD KEY `IDX_".preg_replace('/_id$/','',$colNames[1])."_MTM_".preg_replace('/_id$/','',$colNames[0])."` (`".$colNames[1]."`);\n";
-									$this->relationSql .= "ALTER TABLE `".$table."`\n";
-									$this->relationSql .= "ADD CONSTRAINT `FK_".preg_replace('/_id$/','',$colNames[0])."_MTM_".preg_replace('/_id$/','',$colNames[1])."` FOREIGN KEY (`".$colNames[0]."`) REFERENCES `".Transformer::smurf(preg_replace('/_id$/','',$colNames[0]))."` (`id`),\n";
-									$this->relationSql .= "ADD CONSTRAINT `FK_".preg_replace('/_id$/','',$colNames[1])."_MTM_".preg_replace('/_id$/','',$colNames[0])."` FOREIGN KEY (`".$colNames[1]."`) REFERENCES `".Transformer::smurf(preg_replace('/_id$/','',$colNames[1]))."` (`id`);\n";
-									$this->relationSql .= "\n";
-									/// add sql for second column
-									$this->tableSql .= "`".$columns[$colNames[1]]['Field']."` ".$columns[$colNames[1]]['Type'].(isset($columns[$colNames[1]]['Null']) && $columns[$colNames[1]]['Null'] == 'NO' ? " NOT NULL" : "").(isset($columns[$colNames[1]]['Default']) ? " DEFAULT ".$columns[$colNames[1]]['Default'] : (isset($columns[$colNames[1]]['Null']) && $columns[$colNames[1]]['Null'] == 'NO' ? "" : " DEFAULT NULL")).",\n";
-									break;	/// many-to-many table only has two columns
-								}
-								/// otherwise, use standard approach
-								else{
-									$this->primarySql .= "ALTER TABLE `".$table."` ADD PRIMARY KEY (`".$properties['Field']."`);\n";
-									$this->primarySql .= "ALTER TABLE `".$table."` MODIFY `".$properties['Field']."` ".$properties['Type']." NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=1;\n";
-									$this->primarySql .= "\n";
-								}
-							}
-							/// foreign key
-							else if($properties['Key'] == 'MUL'){
-								$this->relationSql .= "ALTER TABLE `".$table."` ADD CONSTRAINT `FK_".$table."_".preg_replace('/_id$/','',$properties['Field'])."` FOREIGN KEY (`".$properties['Field']."`) REFERENCES `".Transformer::smurf(preg_replace('/_id$/','',$properties['Field']))."` (`id`);\n";
-								$this->relationSql .= "\n";
+							if('break' === $this->generateColumnKeySql($table,$properties,$columns,$this->relationSql,$this->primarySql,$this->tableSql)){
+								break;
 							}
 						}
 					}
@@ -143,6 +166,10 @@ class Generator {
 			foreach ($diff['columns']['add'] as $table => $columns) {
 				foreach ($columns as $column => $properties) {
 					$this->tableSql .= "ALTER TABLE `".$table."` ADD COLUMN `".$properties['Field']."` ".$properties['Type'].(isset($properties['Null']) && $properties['Null'] == 'NO' ? " NOT NULL" : "").(isset($properties['Default']) ? " DEFAULT ".$properties['Default'] : (isset($properties['Null']) && $properties['Null'] == 'NO' ? "" : " DEFAULT NULL")).";\n\n";
+					/// check if current column is a key
+					if(isset($properties['Key'])){
+						$this->generateColumnKeySql($table,$properties,$columns,$this->relationSql,$this->primarySql,$this->tableSql);
+					}
 				}
 			}
 		}
@@ -151,14 +178,24 @@ class Generator {
 			foreach ($diff['columns']['change'] as $table => $columns) {
 				foreach ($columns as $column => $properties) {
 					$this->tableSql .= "ALTER TABLE `".$table."` MODIFY `".$properties['Field']."` ".$properties['Type'].(isset($properties['Null']) && $properties['Null'] == 'NO' ? " NOT NULL" : "").(isset($properties['Default']) ? " DEFAULT ".$properties['Default'] : (isset($properties['Null']) && $properties['Null'] == 'NO' ? "" : " DEFAULT NULL")).";\n\n";
+					/// check if current column is a key
+					if(isset($properties['Key'])){
+						if('break' === $this->generateColumnKeySql($table,$properties,$columns,$this->relationSql,$this->primarySql,$this->tableSql)){
+							break;
+						}
+					}
 				}
 			}
 		}
 
 		if(count($diff['columns']['drop'])){
 			foreach ($diff['columns']['drop'] as $table => $columns) {
-				foreach ($columns as $column) {
-					$this->tableSql .= "ALTER TABLE `".$table."` DROP COLUMN `".$column."`;\n\n";
+				foreach ($columns as $column => $properties) {
+					/// check if current column is a key
+					if(isset($properties['Key'])){
+						$this->generateDropColumnKeySql($table,$properties,$columns,$this->tableSql);
+					}
+					$this->tableSql .= "ALTER TABLE `".$table."` DROP COLUMN `".$properties['Field']."`;\n\n";
 				}
 			}
 		}
