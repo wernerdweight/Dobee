@@ -66,6 +66,10 @@ class Generator {
 				$this->force();
 				$this->generateEntities();
 			}
+			else if(in_array('--generate-entities',$options)){
+				$this->generateEntities();
+				echo "Nothing to update! Entities were generated!\n";
+			}
 			else{
 				echo "Nothing to update! Database is already in sync!\n";
 			}
@@ -340,7 +344,11 @@ class Generator {
 		$class .= "class ".ucfirst($entityName)." ";
 		if(isset($this->model[$entityName]['extends'])){
 			$class .= "extends ".ucfirst($this->model[$entityName]['extends'])." ";
-			$use .= "use ".$this->entityNamespace."\\".ucfirst($this->model[$entityName]['extends']).";\n";
+			$useStringToBeAdded = "use ".$this->entityNamespace."\\".ucfirst($this->model[$entityName]['extends']).";";
+			/// check for duplicity
+			if(false === strpos($use,$useStringToBeAdded)){
+				$use .= $useStringToBeAdded."\n";
+			}
 		}
 		$class .= "{\n\n";
 
@@ -374,87 +382,95 @@ class Generator {
 		if(isset($this->model[$entityName]['relations'])){
 			foreach ($this->model[$entityName]['relations'] as $relatedEntity => $cardinality) {
 				/// use
-				$use .= "use ".$this->entityNamespace."\\".ucfirst($relatedEntity).";\n";
-					switch ($cardinality) {
-						case 'ONE_TO_ONE':
-						case '<<ONE_TO_ONE':
-						case 'MANY_TO_ONE':
-							/// declaration
-							$class .= "\tprotected \$".$relatedEntity.";\n";
-							/// setter
-							$body .= "\tpublic function set".ucfirst($relatedEntity)."(\$".$relatedEntity."){\n";
-							$body .= "\t\t\$this->".$relatedEntity." = \$".$relatedEntity.";\n";
-							$body .= "\t\treturn \$this;\n";
-							$body .= "\t}\n\n";
-							/// getter
-							$body .= "\tpublic function get".ucfirst($relatedEntity)."(){\n";
-							$body .= "\t\treturn \$this->".$relatedEntity.";\n";
-							$body .= "\t}\n\n";
-							break;
-						case 'SELF::ONE_TO_MANY':
-						case 'SELF::MANY_TO_ONE':
-							/// declaration
-							$class .= "\tprotected \$parent".ucfirst($relatedEntity).";\n";
-							/// setter
-							$body .= "\tpublic function setParent".ucfirst($relatedEntity)."(\$parent".ucfirst($relatedEntity)."){\n";
-							$body .= "\t\t\$this->parent".ucfirst($relatedEntity)." = \$parent".ucfirst($relatedEntity).";\n";
-							$body .= "\t\treturn \$this;\n";
-							$body .= "\t}\n\n";
-							/// getter
-							$body .= "\tpublic function getParent".ucfirst($relatedEntity)."(){\n";
-							$body .= "\t\treturn \$this->parent".ucfirst($relatedEntity).";\n";
-							$body .= "\t}\n\n";
-							/// no break here as we also need the 'to-many' methods
-						case 'ONE_TO_MANY':
-						case 'MANY_TO_MANY':
-						case '<<MANY_TO_MANY':
-							/// use
-							$use .= "use WernerDweight\\Dobee\\LazyLoader\\MultipleLazyLoader;\n";
-							/// declaration
-							$class .= "\tprotected \$".Transformer::pluralize($relatedEntity).";\n";
-							/// setters
-							$body .= "\tpublic function add".ucfirst($relatedEntity)."(".ucfirst($relatedEntity)." \$".$relatedEntity."){\n";
-							$body .= "\t\t/// check that items are loaded (if not load them)\n";
-							$body .= "\t\t\$this->load".ucfirst(Transformer::pluralize($relatedEntity))."();\n\n";
-							$body .= "\t\t\$this->".Transformer::pluralize($relatedEntity)."[\$".$relatedEntity."->get".ucfirst($this->getPrimaryKeyForEntity($relatedEntity))."()] = \$".$relatedEntity.";\n";
-							$body .= "\t\treturn \$this;\n";
-							$body .= "\t}\n\n";
-							$body .= "\tpublic function remove".ucfirst($relatedEntity)."(".ucfirst($relatedEntity)." \$".$relatedEntity."){\n";
-							$body .= "\t\t/// check that items are loaded (if not load them)\n";
-							$body .= "\t\t\$this->load".ucfirst(Transformer::pluralize($relatedEntity))."();\n\n";
-							$body .= "\t\tif(isset(\$this->".Transformer::pluralize($relatedEntity)."[\$".$relatedEntity."->get".ucfirst($this->getPrimaryKeyForEntity($relatedEntity))."()])){\n";
-							$body .= "\t\t\tunset(\$this->".Transformer::pluralize($relatedEntity)."[\$".$relatedEntity."->get".ucfirst($this->getPrimaryKeyForEntity($relatedEntity))."()]);\n";
-							$body .= "\t\t}\n";
-							$body .= "\t\treturn \$this;\n";
-							$body .= "\t}\n\n";
-							$body .= "\tpublic function set".ucfirst(Transformer::pluralize($relatedEntity))."(\$".Transformer::pluralize($relatedEntity)."){\n";
-							$body .= "\t\t\$this->".Transformer::pluralize($relatedEntity)." = \$".Transformer::pluralize($relatedEntity).";\n";
-							$body .= "\t\treturn \$this;\n";
-							$body .= "\t}\n\n";
-							/// getters
-							$body .= "\tpublic function get".ucfirst(Transformer::pluralize($relatedEntity))."(){\n";
-							$body .= "\t\t/// check that items are loaded (if not load them)\n";
-							$body .= "\t\t\$this->load".ucfirst(Transformer::pluralize($relatedEntity))."();\n\n";
-							$body .= "\t\treturn \$this->".Transformer::pluralize($relatedEntity).";\n";
-							$body .= "\t}\n\n";
-							$body .= "\tpublic function get".ucfirst($relatedEntity)."(\$key){\n";
-							$body .= "\t\t/// check that items are loaded (if not load them)\n";
-							$body .= "\t\t\$this->load".ucfirst(Transformer::pluralize($relatedEntity))."();\n\n";
-							$body .= "\t\tif(isset(\$this->".Transformer::pluralize($relatedEntity)."[\$key])){\n";
-							$body .= "\t\t\treturn \$this->".Transformer::pluralize($relatedEntity)."[\$key];\n";
-							$body .= "\t\t}\n";
-							$body .= "\t\telse{\n";
-							$body .= "\t\t\treturn null;\n";
-							$body .= "\t\t}\n";
-							$body .= "\t}\n\n";
-							/// loader
-							$body .= "\tpublic function load".ucfirst(Transformer::pluralize($relatedEntity))."(){\n";
-							$body .= "\t\tif(\$this->".Transformer::pluralize($relatedEntity)." instanceof MultipleLazyLoader){\n";
-							$body .= "\t\t\t\$this->".Transformer::pluralize($relatedEntity)."->loadData();\n";
-							$body .= "\t\t}\n";
-							$body .= "\t}\n\n";
-							break;
-					}
+				$useStringToBeAdded = "use ".$this->entityNamespace."\\".ucfirst($relatedEntity).";";
+				/// check for duplicity
+				if(false === strpos($use,$useStringToBeAdded)){
+					$use .= $useStringToBeAdded."\n";
+				}
+				switch ($cardinality) {
+					case 'ONE_TO_ONE':
+					case '<<ONE_TO_ONE':
+					case 'MANY_TO_ONE':
+						/// declaration
+						$class .= "\tprotected \$".$relatedEntity.";\n";
+						/// setter
+						$body .= "\tpublic function set".ucfirst($relatedEntity)."(\$".$relatedEntity."){\n";
+						$body .= "\t\t\$this->".$relatedEntity." = \$".$relatedEntity.";\n";
+						$body .= "\t\treturn \$this;\n";
+						$body .= "\t}\n\n";
+						/// getter
+						$body .= "\tpublic function get".ucfirst($relatedEntity)."(){\n";
+						$body .= "\t\treturn \$this->".$relatedEntity.";\n";
+						$body .= "\t}\n\n";
+						break;
+					case 'SELF::ONE_TO_MANY':
+					case 'SELF::MANY_TO_ONE':
+						/// declaration
+						$class .= "\tprotected \$parent".ucfirst($relatedEntity).";\n";
+						/// setter
+						$body .= "\tpublic function setParent".ucfirst($relatedEntity)."(\$parent".ucfirst($relatedEntity)."){\n";
+						$body .= "\t\t\$this->parent".ucfirst($relatedEntity)." = \$parent".ucfirst($relatedEntity).";\n";
+						$body .= "\t\treturn \$this;\n";
+						$body .= "\t}\n\n";
+						/// getter
+						$body .= "\tpublic function getParent".ucfirst($relatedEntity)."(){\n";
+						$body .= "\t\treturn \$this->parent".ucfirst($relatedEntity).";\n";
+						$body .= "\t}\n\n";
+						/// no break here as we also need the 'to-many' methods
+					case 'ONE_TO_MANY':
+					case 'MANY_TO_MANY':
+					case '<<MANY_TO_MANY':
+						/// use
+						$useStringToBeAdded = "use WernerDweight\\Dobee\\LazyLoader\\MultipleLazyLoader;";
+						/// check for duplicity
+						if(false === strpos($use,$useStringToBeAdded)){
+							$use .= $useStringToBeAdded."\n";
+						}
+						/// declaration
+						$class .= "\tprotected \$".Transformer::pluralize($relatedEntity).";\n";
+						/// setters
+						$body .= "\tpublic function add".ucfirst($relatedEntity)."(".ucfirst($relatedEntity)." \$".$relatedEntity."){\n";
+						$body .= "\t\t/// check that items are loaded (if not load them)\n";
+						$body .= "\t\t\$this->load".ucfirst(Transformer::pluralize($relatedEntity))."();\n\n";
+						$body .= "\t\t\$this->".Transformer::pluralize($relatedEntity)."[\$".$relatedEntity."->get".ucfirst($this->getPrimaryKeyForEntity($relatedEntity))."()] = \$".$relatedEntity.";\n";
+						$body .= "\t\treturn \$this;\n";
+						$body .= "\t}\n\n";
+						$body .= "\tpublic function remove".ucfirst($relatedEntity)."(".ucfirst($relatedEntity)." \$".$relatedEntity."){\n";
+						$body .= "\t\t/// check that items are loaded (if not load them)\n";
+						$body .= "\t\t\$this->load".ucfirst(Transformer::pluralize($relatedEntity))."();\n\n";
+						$body .= "\t\tif(isset(\$this->".Transformer::pluralize($relatedEntity)."[\$".$relatedEntity."->get".ucfirst($this->getPrimaryKeyForEntity($relatedEntity))."()])){\n";
+						$body .= "\t\t\tunset(\$this->".Transformer::pluralize($relatedEntity)."[\$".$relatedEntity."->get".ucfirst($this->getPrimaryKeyForEntity($relatedEntity))."()]);\n";
+						$body .= "\t\t}\n";
+						$body .= "\t\treturn \$this;\n";
+						$body .= "\t}\n\n";
+						$body .= "\tpublic function set".ucfirst(Transformer::pluralize($relatedEntity))."(\$".Transformer::pluralize($relatedEntity)."){\n";
+						$body .= "\t\t\$this->".Transformer::pluralize($relatedEntity)." = \$".Transformer::pluralize($relatedEntity).";\n";
+						$body .= "\t\treturn \$this;\n";
+						$body .= "\t}\n\n";
+						/// getters
+						$body .= "\tpublic function get".ucfirst(Transformer::pluralize($relatedEntity))."(){\n";
+						$body .= "\t\t/// check that items are loaded (if not load them)\n";
+						$body .= "\t\t\$this->load".ucfirst(Transformer::pluralize($relatedEntity))."();\n\n";
+						$body .= "\t\treturn \$this->".Transformer::pluralize($relatedEntity).";\n";
+						$body .= "\t}\n\n";
+						$body .= "\tpublic function get".ucfirst($relatedEntity)."(\$key){\n";
+						$body .= "\t\t/// check that items are loaded (if not load them)\n";
+						$body .= "\t\t\$this->load".ucfirst(Transformer::pluralize($relatedEntity))."();\n\n";
+						$body .= "\t\tif(isset(\$this->".Transformer::pluralize($relatedEntity)."[\$key])){\n";
+						$body .= "\t\t\treturn \$this->".Transformer::pluralize($relatedEntity)."[\$key];\n";
+						$body .= "\t\t}\n";
+						$body .= "\t\telse{\n";
+						$body .= "\t\t\treturn null;\n";
+						$body .= "\t\t}\n";
+						$body .= "\t}\n\n";
+						/// loader
+						$body .= "\tpublic function load".ucfirst(Transformer::pluralize($relatedEntity))."(){\n";
+						$body .= "\t\tif(\$this->".Transformer::pluralize($relatedEntity)." instanceof MultipleLazyLoader){\n";
+						$body .= "\t\t\t\$this->".Transformer::pluralize($relatedEntity)."->loadData();\n";
+						$body .= "\t\t}\n";
+						$body .= "\t}\n\n";
+						break;
+				}
 			}
 		}
 
