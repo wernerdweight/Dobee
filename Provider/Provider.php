@@ -420,23 +420,23 @@ class Provider {
 		if(isset($options['join']) && is_array($options['join'])){
 			foreach ($options['join'] as $relatedEntity => $name) {
 				$relatedEntityStripped = Transformer::strip($relatedEntity);
-				$join .= " JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".$name." ON this.".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".$name.".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
+				$join .= " JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON this.".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
 			}
 		}
 		if(isset($options['leftJoin']) && is_array($options['leftJoin'])){
 			foreach ($options['leftJoin'] as $relatedEntity => $name) {
 				$relatedEntityStripped = Transformer::strip($relatedEntity);
-				$join .= " LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".$name." ON this.".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".$name.".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
+				$join .= " LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON this.".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
 			}
 		}
 		if(isset($options['plainJoin']) && is_array($options['plainJoin'])){
 			foreach ($options['plainJoin'] as $relatedEntity => $settings) {
-				$join .= " JOIN ".$relatedEntity." ".$settings['name']." ON this.".$settings['entityKey']." = ".$settings['name'].".".$settings['relatedEntityKey'];
+				$join .= " JOIN ".$relatedEntity." ".Transformer::camelCaseToUnderscore($settings['name'])." ON this.".$settings['entityKey']." = ".Transformer::camelCaseToUnderscore($settings['name']).".".$settings['relatedEntityKey'];
 			}
 		}
 		if(isset($options['plainLeftJoin']) && is_array($options['plainLeftJoin'])){
 			foreach ($options['plainLeftJoin'] as $relatedEntity => $settings) {
-				$join .= " LEFT JOIN ".$relatedEntity." ".$settings['name']." ON this.".$settings['entityKey']." = ".$settings['name'].".".$settings['relatedEntityKey'];
+				$join .= " LEFT JOIN ".$relatedEntity." ".Transformer::camelCaseToUnderscore($settings['name'])." ON this.".$settings['entityKey']." = ".Transformer::camelCaseToUnderscore($settings['name']).".".$settings['relatedEntityKey'];
 			}
 		}
 
