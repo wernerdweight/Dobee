@@ -214,6 +214,8 @@ class Generator {
 	}
 
 	protected function removeTemporary(){
+		/// set group concat length for big databases (many tables)
+		$this->connection->query("SET SESSION group_concat_max_len=32768;");
 		/// get query to drop all tmp-prefixed tables
 		if(!($dropQuery = $this->connection->query("SELECT CONCAT('DROP TABLE ',GROUP_CONCAT(table_name),';') AS statement FROM information_schema.tables WHERE table_schema = '".$this->database."' AND table_name LIKE 'tmp_%';"))){
 			throw new DatabaseException("Database construction failed: (".$this->connection->errno.") ".$this->connection->error);
