@@ -95,7 +95,6 @@ class Provider {
 		/// limit
 		$limit = $this->getLimit($options);
 		/// fetch result
-		echo $select.$join.$where.$order.$limit;
 		$result = $this->execute($select.$join.$where.$order.$limit,$types,$params);
 
 		$results = array();
