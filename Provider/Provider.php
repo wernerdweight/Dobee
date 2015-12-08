@@ -31,7 +31,7 @@ class Provider {
 		/// select
 		$select = $this->getSelect($entityName);
 		/// joins (join, left join)
-		$join = $this->getJoins($options);
+		$join = $this->getJoins($options,$entityName);
 		/// where
 		$where = $this->getWhere($entityName,$options,$types,$params);
 		/// add PK to the where clause
@@ -77,7 +77,7 @@ class Provider {
 		/// select
 		$select = $this->getSelect($entityName);
 		/// joins (join, left join)
-		$join = $this->getJoins($options);
+		$join = $this->getJoins($options,$entityName);
 		/// where
 		$where = $this->getWhere($entityName,$options,$types,$params);
 		/// if entity is soft-deletable add condition
@@ -421,19 +421,39 @@ class Provider {
 		return $order;
 	}
 
-	protected function getJoins($options){
+	protected function getJoins($options,$entityName){
 		$join = "";
 
 		if(isset($options['join']) && is_array($options['join'])){
+			$relatedEntityStripped = Transformer::strip($relatedEntity);
 			foreach ($options['join'] as $relatedEntity => $name) {
-				$relatedEntityStripped = Transformer::strip($relatedEntity);
-				$join .= " JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON this.".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
+				$cardinality = $this->model[$entityName]['relations'][$relatedEntityStripped];
+				$owning = (false !== strpos($cardinality,'<<') ? true : false);
+				if(false !== strpos($cardinality,'MANY_TO_MANY')){
+					/// M:N join
+					$mtmTableName = ($owning ? Transformer::smurf(Transformer::camelCaseToUnderscore($entityName)).'_MTM_'.Transformer::camelCaseToUnderscore($relatedEntityStripped) : Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped)).'_MTM_'.Transformer::camelCaseToUnderscore($entityName));
+					$join .= " JOIN ".$mtmTableName." ".$mtmTableName." ON this.".$this->getPrimaryKeyForEntity($entityName)." = ".$mtmTableName.".".Transformer::camelCaseToUnderscore($entityName)."_id JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON ".$mtmTableName.".".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
+				}
+				else{
+					/// 1:N to many join
+					$join .= " JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON this.".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
+				}
 			}
 		}
 		if(isset($options['leftJoin']) && is_array($options['leftJoin'])){
 			foreach ($options['leftJoin'] as $relatedEntity => $name) {
 				$relatedEntityStripped = Transformer::strip($relatedEntity);
-				$join .= " LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON this.".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
+				$cardinality = $this->model[$entityName]['relations'][$relatedEntityStripped];
+				$owning = (false !== strpos($cardinality,'<<') ? true : false);
+				if(false !== strpos($cardinality,'MANY_TO_MANY')){
+					/// M:N left join
+					$mtmTableName = ($owning ? Transformer::smurf(Transformer::camelCaseToUnderscore($entityName)).'_MTM_'.Transformer::camelCaseToUnderscore($relatedEntityStripped) : Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped)).'_MTM_'.Transformer::camelCaseToUnderscore($entityName));
+					$join .= " LEFT JOIN ".$mtmTableName." ".$mtmTableName." ON this.".$this->getPrimaryKeyForEntity($entityName)." = ".$mtmTableName.".".Transformer::camelCaseToUnderscore($entityName)."_id LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON ".$mtmTableName.".".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
+				}
+				else{
+					/// 1:N to many left join
+					$join .= " LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON this.".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
+				}
 			}
 		}
 		if(isset($options['plainJoin']) && is_array($options['plainJoin'])){
