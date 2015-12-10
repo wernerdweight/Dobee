@@ -285,7 +285,7 @@ class Provider {
 			case '<': case 'lt': return '< ?';
 			case '<=': case 'lte': return '<= ?';
 			case '%%': case 'like': return 'LIKE ?';
-			case '~': case 'in': return 'IN ?';
+			case '~': case 'in': return 'IN (?)';
 			case '0': case 'null': return 'IS NULL';
 			case '!0': case 'nn': return 'IS NOT NULL';
 			default: throw new UnknownOperationException('Operator "'.$operator.'" is unknown!');
@@ -538,112 +538,107 @@ class Provider {
 				if($this->hasProperty($entityName,lcfirst(Transformer::underscoreToCamelCase($property))) === true){
 					$entity->{'set'.Transformer::underscoreToCamelCase($property)}($value);
 				}
-				/// hydrate relations
-				if(isset($this->model[$entityName]['relations'])){
-					foreach ($this->model[$entityName]['relations'] as $relatedEntity => $cardinality) {
-						switch ($cardinality) {
-							case 'SELF::MANY_TO_ONE':
-							case 'SELF::ONE_TO_MANY':
-								/// foreign key must be set and not null
-								if(isset($entityData[Transformer::camelCaseToUnderscore($relatedEntity).'_id']) && !is_null($entityData[Transformer::camelCaseToUnderscore($relatedEntity).'_id'])){
-									/// set lazy-loader for single item
-									$entity->{'setParent'.ucfirst($relatedEntity)}(
-										new SingleLazyLoader(
-											$this,
-											$relatedEntity,
-											$entityData[Transformer::camelCaseToUnderscore($relatedEntity).'_id']
-										)
-									);
-								}
-								/// set lazy-loader for multiple items
-								$entity->{'set'.ucfirst(Transformer::pluralize($relatedEntity))}(
-									new MultipleLazyLoader(
+			}
+			/// hydrate relations
+			if(isset($this->model[$entityName]['relations'])){
+				foreach ($this->model[$entityName]['relations'] as $relatedEntity => $cardinality) {
+					switch ($cardinality) {
+						case 'SELF::MANY_TO_ONE':
+						case 'SELF::ONE_TO_MANY':
+							/// foreign key must be set and not null
+							if(isset($entityData[Transformer::camelCaseToUnderscore($relatedEntity).'_id']) && !is_null($entityData[Transformer::camelCaseToUnderscore($relatedEntity).'_id'])){
+								/// set lazy-loader for single item
+								$entity->{'setParent'.ucfirst($relatedEntity)}(
+									new SingleLazyLoader(
 										$this,
-										$entity,
 										$relatedEntity,
-										array(
-											'where' => array(
-												'this.'.Transformer::camelCaseToUnderscore($entityName).'_id' => array(
-													'operator' => 'eq',
-													'type' => $this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName)),
-													'value' => $entity->{'get'.ucfirst($this->getPrimaryKeyForEntity($entityName))}()
-												)
-											),
-											'order' => array(
-												'this.'.Transformer::camelCaseToUnderscore($this->getDefaultOrderForEntity($relatedEntity)) => $this->getDefaultOrderForEntity($relatedEntity,false)
-											)
-										)
+										$entityData[Transformer::camelCaseToUnderscore($relatedEntity).'_id']
 									)
 								);
-								break;
-							case 'ONE_TO_ONE':
-							case '<<ONE_TO_ONE':
-							case 'MANY_TO_ONE':
-								/// foreign key must be set and not null
-								if(isset($entityData[Transformer::camelCaseToUnderscore($relatedEntity).'_id']) && !is_null($entityData[Transformer::camelCaseToUnderscore($relatedEntity).'_id'])){
-									/// set lazy-loader for single item
-									$entity->{'set'.ucfirst($relatedEntity)}(
-										new SingleLazyLoader(
-											$this,
-											$relatedEntity,
-											$entityData[Transformer::camelCaseToUnderscore($relatedEntity).'_id']
-										)
-									);
-								}
-								break;
-							case 'ONE_TO_MANY':
-								/// set lazy-loader for multiple items
-								$entity->{'set'.ucfirst(Transformer::pluralize($relatedEntity))}(
-									new MultipleLazyLoader(
-										$this,
-										$entity,
-										$relatedEntity,
-										array(
-											'where' => array(
-												'this.'.Transformer::camelCaseToUnderscore($entityName).'_id' => array(
-													'operator' => 'eq',
-													'type' => $this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName)),
-													'value' => $entity->{'get'.ucfirst($this->getPrimaryKeyForEntity($entityName))}()
-												)
-											),
-											'order' => array(
-												'this.'.Transformer::camelCaseToUnderscore($this->getDefaultOrderForEntity($relatedEntity)) => $this->getDefaultOrderForEntity($relatedEntity,false)
+							}
+							/// set lazy-loader for multiple items
+							$entity->{'set'.ucfirst(Transformer::pluralize($relatedEntity))}(
+								new MultipleLazyLoader(
+									$this,
+									$entity,
+									$relatedEntity,
+									array(
+										'where' => array(
+											'this.'.Transformer::camelCaseToUnderscore($entityName).'_id' => array(
+												'operator' => 'eq',
+												'type' => $this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName)),
+												'value' => $entity->{'get'.ucfirst($this->getPrimaryKeyForEntity($entityName))}()
 											)
+										),
+										'order' => array(
+											'this.'.Transformer::camelCaseToUnderscore($this->getDefaultOrderForEntity($relatedEntity)) => $this->getDefaultOrderForEntity($relatedEntity,false)
 										)
 									)
-								);
-								break;
-							case 'MANY_TO_MANY':
-							case '<<MANY_TO_MANY':
-								/// set lazy-loader for multiple items with many-to-many loading
-								$entity->{'set'.ucfirst(Transformer::pluralize($relatedEntity))}(
-									new MultipleLazyLoader(
+								)
+							);
+							break;
+						case 'ONE_TO_ONE':
+						case '<<ONE_TO_ONE':
+						case 'MANY_TO_ONE':
+							/// foreign key must be set and not null
+							if(isset($entityData[Transformer::camelCaseToUnderscore($relatedEntity).'_id']) && !is_null($entityData[Transformer::camelCaseToUnderscore($relatedEntity).'_id'])){
+								/// set lazy-loader for single item
+								$entity->{'set'.ucfirst($relatedEntity)}(
+									new SingleLazyLoader(
 										$this,
-										$entity,
 										$relatedEntity,
-										array(
-											'plainLeftJoin' => array(
-												Transformer::smurf(Transformer::camelCaseToUnderscore($cardinality == '<<MANY_TO_MANY' ? $entityName : $relatedEntity).'_mtm_'.Transformer::camelCaseToUnderscore($cardinality == '<<MANY_TO_MANY' ? $relatedEntity : $entityName)) => array(
-													'name' => $relatedEntity,
-													'entityKey' => $this->getPrimaryKeyForEntity($entityName),
-													'relatedEntityKey' => Transformer::camelCaseToUnderscore($entityName).'_id'
-												)
-											),
-											'where' => array(
-												$relatedEntity.'.'.Transformer::camelCaseToUnderscore($entityName).'_id' => array(
-													'operator' => 'eq',
-													'type' => $this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName)),
-													'value' => $entity->{'get'.ucfirst($this->getPrimaryKeyForEntity($entityName))}()
-												)
-											),
-											'order' => array(
-												'this.'.Transformer::camelCaseToUnderscore($this->getDefaultOrderForEntity($relatedEntity)) => $this->getDefaultOrderForEntity($relatedEntity,false)
-											)
-										)
+										$entityData[Transformer::camelCaseToUnderscore($relatedEntity).'_id']
 									)
 								);
-								break;
-						}
+							}
+							break;
+						case 'ONE_TO_MANY':
+							/// set lazy-loader for multiple items
+							$entity->{'set'.ucfirst(Transformer::pluralize($relatedEntity))}(
+								new MultipleLazyLoader(
+									$this,
+									$entity,
+									$relatedEntity,
+									array(
+										'where' => array(
+											'this.'.Transformer::camelCaseToUnderscore($entityName).'_id' => array(
+												'operator' => 'eq',
+												'type' => $this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName)),
+												'value' => $entity->{'get'.ucfirst($this->getPrimaryKeyForEntity($entityName))}()
+											)
+										),
+										'order' => array(
+											'this.'.Transformer::camelCaseToUnderscore($this->getDefaultOrderForEntity($relatedEntity)) => $this->getDefaultOrderForEntity($relatedEntity,false)
+										)
+									)
+								)
+							);
+							break;
+						case 'MANY_TO_MANY':
+						case '<<MANY_TO_MANY':
+							/// set lazy-loader for multiple items with many-to-many loading
+							$entity->{'set'.ucfirst(Transformer::pluralize($relatedEntity))}(
+								new MultipleLazyLoader(
+									$this,
+									$entity,
+									$relatedEntity,
+									array(
+										'leftJoin' => array(
+											'this.'.Transformer::camelCaseToUnderscore($entityName) => Transformer::camelCaseToUnderscore($entityName)
+										),
+										'where' => array(
+											$entityName.'.'.$this->getPrimaryKeyForEntity($entityName) => array(
+												'operator' => 'eq',
+												'value' => $entity->{'get'.ucfirst($this->getPrimaryKeyForEntity($entityName))}()
+											)
+										),
+										'order' => array(
+											'this.'.Transformer::camelCaseToUnderscore($this->getDefaultOrderForEntity($relatedEntity)) => $this->getDefaultOrderForEntity($relatedEntity,false)
+										)
+									)
+								)
+							);
+							break;
 					}
 				}
 			}
