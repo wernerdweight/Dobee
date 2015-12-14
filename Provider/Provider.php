@@ -428,15 +428,19 @@ class Provider {
 			$relatedEntityStripped = Transformer::strip($relatedEntity);
 			foreach ($options['join'] as $relatedEntity => $name) {
 				$cardinality = $this->model[$entityName]['relations'][$relatedEntityStripped];
-				$owning = (false !== strpos($cardinality,'<<') ? true : false);
+				$owning = (false !== strpos($cardinality,'<<') ? true : ($cardinality === 'MANY_TO_ONE' ? true : false));
 				if(false !== strpos($cardinality,'MANY_TO_MANY')){
 					/// M:N join
 					$mtmTableName = ($owning ? Transformer::smurf(Transformer::camelCaseToUnderscore($entityName)).'_mtm_'.Transformer::camelCaseToUnderscore($relatedEntityStripped) : Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped)).'_mtm_'.Transformer::camelCaseToUnderscore($entityName));
 					$join .= " JOIN ".$mtmTableName." ".$mtmTableName." ON this.".$this->getPrimaryKeyForEntity($entityName)." = ".$mtmTableName.".".Transformer::camelCaseToUnderscore($entityName)."_id JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON ".$mtmTableName.".".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
 				}
-				else{
-					/// 1:N to many join
+				else if($owning === true){
+					/// many-to-one or one-to-one join
 					$join .= " JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON this.".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
+				}
+				else{
+					/// one-to-many left join
+					$join .= " JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON ".Transformer::camelCaseToUnderscore($name).".".Transformer::camelCaseToUnderscore($entityName)."_id = this.".$this->getPrimaryKeyForEntity($entityName);
 				}
 			}
 		}
@@ -444,15 +448,19 @@ class Provider {
 			foreach ($options['leftJoin'] as $relatedEntity => $name) {
 				$relatedEntityStripped = Transformer::strip($relatedEntity);
 				$cardinality = $this->model[$entityName]['relations'][$relatedEntityStripped];
-				$owning = (false !== strpos($cardinality,'<<') ? true : false);
+				$owning = (false !== strpos($cardinality,'<<') ? true : ($cardinality === 'MANY_TO_ONE' ? true : false));
 				if(false !== strpos($cardinality,'MANY_TO_MANY')){
 					/// M:N left join
 					$mtmTableName = ($owning ? Transformer::smurf(Transformer::camelCaseToUnderscore($entityName)).'_mtm_'.Transformer::camelCaseToUnderscore($relatedEntityStripped) : Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped)).'_mtm_'.Transformer::camelCaseToUnderscore($entityName));
 					$join .= " LEFT JOIN ".$mtmTableName." ".$mtmTableName." ON this.".$this->getPrimaryKeyForEntity($entityName)." = ".$mtmTableName.".".Transformer::camelCaseToUnderscore($entityName)."_id LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON ".$mtmTableName.".".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
 				}
-				else{
-					/// 1:N to many left join
+				else if($owning === true){
+					/// many-to-one or one-to-one left join
 					$join .= " LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON this.".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
+				}
+				else{
+					/// one-to-many left join
+					$join .= " LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON ".Transformer::camelCaseToUnderscore($name).".".Transformer::camelCaseToUnderscore($entityName)."_id = this.".$this->getPrimaryKeyForEntity($entityName);
 				}
 			}
 		}
