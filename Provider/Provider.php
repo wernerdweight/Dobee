@@ -29,7 +29,7 @@ class Provider {
 		$params = array();
 
 		/// select
-		$select = $this->getSelect($entityName);
+		$select = $this->getSelect($entityName,$options);
 		/// joins (join, left join)
 		$join = $this->getJoins($options,$entityName);
 		/// where
@@ -75,7 +75,7 @@ class Provider {
 		$params = array();
 
 		/// select
-		$select = $this->getSelect($entityName);
+		$select = $this->getSelect($entityName,$options);
 		/// joins (join, left join)
 		$join = $this->getJoins($options,$entityName);
 		/// where
@@ -403,8 +403,12 @@ class Provider {
 		}
 	}
 
-	protected function getSelect($entityName){
-		return "SELECT this.* FROM ".Transformer::smurf(Transformer::camelCaseToUnderscore($entityName))." this";
+	protected function getSelect($entityName,$options = []){
+		$selectionProperty = 'this.*';
+		if(isset($options['select'])){
+			$selectionProperty = $options['select'];
+		}
+		return "SELECT ".$selectionProperty." FROM ".Transformer::smurf(Transformer::camelCaseToUnderscore($entityName))." this";
 	}
 
 	protected function getOrderBy($options){
