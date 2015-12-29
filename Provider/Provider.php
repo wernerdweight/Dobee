@@ -432,7 +432,7 @@ class Provider {
 			$relatedEntityStripped = Transformer::strip($relatedEntity);
 			foreach ($options['join'] as $relatedEntity => $name) {
 				$cardinality = $this->model[$entityName]['relations'][$relatedEntityStripped];
-				$owning = (false !== strpos($cardinality,'<<') ? true : ($cardinality === 'MANY_TO_ONE' ? true : false));
+				$owning = (false !== strpos($cardinality,'<<') ? true : ($cardinality === 'MANY_TO_ONE' ? true : (false !== strpos($relatedEntity,'<<') ? true : false)));
 				if(false !== strpos($cardinality,'MANY_TO_MANY')){
 					/// M:N join
 					$mtmTableName = ($owning ? Transformer::smurf(Transformer::camelCaseToUnderscore($entityName)).'_mtm_'.Transformer::camelCaseToUnderscore($relatedEntityStripped) : Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped)).'_mtm_'.Transformer::camelCaseToUnderscore($entityName));
@@ -452,7 +452,7 @@ class Provider {
 			foreach ($options['leftJoin'] as $relatedEntity => $name) {
 				$relatedEntityStripped = Transformer::strip($relatedEntity);
 				$cardinality = $this->model[$entityName]['relations'][$relatedEntityStripped];
-				$owning = (false !== strpos($cardinality,'<<') ? true : ($cardinality === 'MANY_TO_ONE' ? true : false));
+				$owning = (false !== strpos($cardinality,'<<') ? true : ($cardinality === 'MANY_TO_ONE' ? true : (false !== strpos($relatedEntity,'<<') ? true : false)));
 				if(false !== strpos($cardinality,'MANY_TO_MANY')){
 					/// M:N left join
 					$mtmTableName = ($owning ? Transformer::smurf(Transformer::camelCaseToUnderscore($entityName)).'_mtm_'.Transformer::camelCaseToUnderscore($relatedEntityStripped) : Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped)).'_mtm_'.Transformer::camelCaseToUnderscore($entityName));
