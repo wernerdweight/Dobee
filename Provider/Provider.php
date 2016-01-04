@@ -429,53 +429,57 @@ class Provider {
 		$join = "";
 
 		if(isset($options['join']) && is_array($options['join'])){
-			$relatedEntityStripped = Transformer::strip($relatedEntity);
 			foreach ($options['join'] as $relatedEntity => $name) {
-				$cardinality = $this->model[$entityName]['relations'][$relatedEntityStripped];
+				$relatedEntityStripped = Transformer::strip($relatedEntity);
+				$relatedEntityOwner = Transformer::strip($relatedEntity,false);
+				$cardinality = $this->model[$relatedEntityOwner === 'this' ? $entityName : $relatedEntityOwner]['relations'][$relatedEntityStripped];
 				$owning = (false !== strpos($cardinality,'<<') ? true : ($cardinality === 'MANY_TO_ONE' ? true : (false !== strpos($relatedEntity,'<<') ? true : false)));
 				if(false !== strpos($cardinality,'MANY_TO_MANY')){
 					/// M:N join
 					$mtmTableName = ($owning ? Transformer::smurf(Transformer::camelCaseToUnderscore($entityName)).'_mtm_'.Transformer::camelCaseToUnderscore($relatedEntityStripped) : Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped)).'_mtm_'.Transformer::camelCaseToUnderscore($entityName));
-					$join .= " JOIN ".$mtmTableName." ".$mtmTableName." ON this.".$this->getPrimaryKeyForEntity($entityName)." = ".$mtmTableName.".".Transformer::camelCaseToUnderscore($entityName)."_id JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON ".$mtmTableName.".".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
+					$join .= " JOIN ".$mtmTableName." ".$mtmTableName." ON ".Transformer::camelCaseToUnderscore($relatedEntityOwner).".".$this->getPrimaryKeyForEntity($entityName)." = ".$mtmTableName.".".Transformer::camelCaseToUnderscore($entityName)."_id JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON ".$mtmTableName.".".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
 				}
 				else if($owning === true){
 					/// many-to-one or one-to-one join
-					$join .= " JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON this.".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
+					$join .= " JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON ".Transformer::camelCaseToUnderscore($relatedEntityOwner).".".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
 				}
 				else{
 					/// one-to-many left join
-					$join .= " JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON ".Transformer::camelCaseToUnderscore($name).".".Transformer::camelCaseToUnderscore($entityName)."_id = this.".$this->getPrimaryKeyForEntity($entityName);
+					$join .= " JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON ".Transformer::camelCaseToUnderscore($name).".".Transformer::camelCaseToUnderscore($entityName)."_id = ".Transformer::camelCaseToUnderscore($relatedEntityOwner).".".$this->getPrimaryKeyForEntity($entityName);
 				}
 			}
 		}
 		if(isset($options['leftJoin']) && is_array($options['leftJoin'])){
 			foreach ($options['leftJoin'] as $relatedEntity => $name) {
 				$relatedEntityStripped = Transformer::strip($relatedEntity);
-				$cardinality = $this->model[$entityName]['relations'][$relatedEntityStripped];
+				$relatedEntityOwner = Transformer::strip($relatedEntity,false);
+				$cardinality = $this->model[$relatedEntityOwner === 'this' ? $entityName : $relatedEntityOwner]['relations'][$relatedEntityStripped];
 				$owning = (false !== strpos($cardinality,'<<') ? true : ($cardinality === 'MANY_TO_ONE' ? true : (false !== strpos($relatedEntity,'<<') ? true : false)));
 				if(false !== strpos($cardinality,'MANY_TO_MANY')){
 					/// M:N left join
 					$mtmTableName = ($owning ? Transformer::smurf(Transformer::camelCaseToUnderscore($entityName)).'_mtm_'.Transformer::camelCaseToUnderscore($relatedEntityStripped) : Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped)).'_mtm_'.Transformer::camelCaseToUnderscore($entityName));
-					$join .= " LEFT JOIN ".$mtmTableName." ".$mtmTableName." ON this.".$this->getPrimaryKeyForEntity($entityName)." = ".$mtmTableName.".".Transformer::camelCaseToUnderscore($entityName)."_id LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON ".$mtmTableName.".".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
+					$join .= " LEFT JOIN ".$mtmTableName." ".$mtmTableName." ON ".Transformer::camelCaseToUnderscore($relatedEntityOwner).".".$this->getPrimaryKeyForEntity($entityName)." = ".$mtmTableName.".".Transformer::camelCaseToUnderscore($entityName)."_id LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON ".$mtmTableName.".".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
 				}
 				else if($owning === true){
 					/// many-to-one or one-to-one left join
-					$join .= " LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON this.".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
+					$join .= " LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON ".Transformer::camelCaseToUnderscore($relatedEntityOwner).".".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
 				}
 				else{
 					/// one-to-many left join
-					$join .= " LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON ".Transformer::camelCaseToUnderscore($name).".".Transformer::camelCaseToUnderscore($entityName)."_id = this.".$this->getPrimaryKeyForEntity($entityName);
+					$join .= " LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." ".Transformer::camelCaseToUnderscore($name)." ON ".Transformer::camelCaseToUnderscore($name).".".Transformer::camelCaseToUnderscore($entityName)."_id = ".Transformer::camelCaseToUnderscore($relatedEntityOwner).".".$this->getPrimaryKeyForEntity($entityName);
 				}
 			}
 		}
 		if(isset($options['plainJoin']) && is_array($options['plainJoin'])){
 			foreach ($options['plainJoin'] as $relatedEntity => $settings) {
-				$join .= " JOIN ".$relatedEntity." ".Transformer::camelCaseToUnderscore($settings['name'])." ON this.".$settings['entityKey']." = ".Transformer::camelCaseToUnderscore($settings['name']).".".$settings['relatedEntityKey'];
+				$relatedEntityOwner = Transformer::strip($relatedEntity,false);
+				$join .= " JOIN ".$relatedEntity." ".Transformer::camelCaseToUnderscore($settings['name'])." ON ".Transformer::camelCaseToUnderscore($relatedEntityOwner).".".$settings['entityKey']." = ".Transformer::camelCaseToUnderscore($settings['name']).".".$settings['relatedEntityKey'];
 			}
 		}
 		if(isset($options['plainLeftJoin']) && is_array($options['plainLeftJoin'])){
 			foreach ($options['plainLeftJoin'] as $relatedEntity => $settings) {
-				$join .= " LEFT JOIN ".$relatedEntity." ".Transformer::camelCaseToUnderscore($settings['name'])." ON this.".$settings['entityKey']." = ".Transformer::camelCaseToUnderscore($settings['name']).".".$settings['relatedEntityKey'];
+				$relatedEntityOwner = Transformer::strip($relatedEntity,false);
+				$join .= " LEFT JOIN ".$relatedEntity." ".Transformer::camelCaseToUnderscore($settings['name'])." ON ".Transformer::camelCaseToUnderscore($relatedEntityOwner).".".$settings['entityKey']." = ".Transformer::camelCaseToUnderscore($settings['name']).".".$settings['relatedEntityKey'];
 			}
 		}
 
