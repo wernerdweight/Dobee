@@ -180,11 +180,9 @@ class Provider {
 		if(count($properties)){
 			foreach ($properties as $property) {
 				if($this->getPrimaryKeyForEntity($entityName) == $property) continue;
-				if(!is_null($entity->{'get'.ucfirst($property)}())){
-					$query .= "`".Transformer::camelCaseToUnderscore($property)."` = ?, ";
-					$types[] = $this->resolvePropertyStatementType($entityName,$property);
-					$params[] = $this->resolveValue($entityName,$property,$entity->{'get'.ucfirst($property)}());
-				}
+				$query .= "`".Transformer::camelCaseToUnderscore($property)."` = ?, ";
+				$types[] = $this->resolvePropertyStatementType($entityName,$property);
+				$params[] = $this->resolveValue($entityName,$property,$entity->{'get'.ucfirst($property)}());
 			}
 		}
 
