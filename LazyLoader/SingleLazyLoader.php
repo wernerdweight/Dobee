@@ -6,20 +6,27 @@ use WernerDweight\Dobee\Provider\Provider;
 
 class SingleLazyLoader {
 
-	protected $provider;
-	protected $entityName;
-	protected $primaryKey;
-	protected $data;
+    protected $provider;
+    protected $entityName;
+    protected $primaryKey;
+    protected $data;
 
-	public function __construct(Provider $provider, $entityName, $primaryKey){
-		$this->provider = $provider;
-		$this->entityName = $entityName;
-		$this->primaryKey = $primaryKey;
-		$this->data = null;
-	}
+    public function __construct(Provider $provider, $entityName, $primaryKey){
+        $this->provider = $provider;
+        $this->entityName = $entityName;
+        $this->primaryKey = $primaryKey;
+        $this->data = null;
+    }
 
-	protected function loadData(){
+    protected function loadData(){
         $this->data = $this->provider->fetchOne($this->entityName,$this->primaryKey);
+    }
+
+    public function getData(){
+        if($this->data === null){
+            $this->loadData();
+        }
+        return $this->data;
     }
 
     public function __call($name,$args){
