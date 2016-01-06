@@ -519,8 +519,12 @@ class Provider {
 					$clause .= Transformer::camelCaseToUnderscore($property)." ".$this->resolveOperation($operator);
 					if(strpos($clause,'?') !== false){
 						$propertyStripped = Transformer::strip($property);
-						$types[] = null !== $type ? $type : $this->resolvePropertyStatementType($entityName,$propertyStripped);
-						$params[] = $this->resolveValue($entityName,$propertyStripped,$value,null !== $type ? $type : null);
+						$entityStripped = Transformer::strip($property,false);
+						if($entityStripped === 'this'){
+							$entityStripped = $entityName;
+						}
+						$types[] = null !== $type ? $type : $this->resolvePropertyStatementType($entityStripped,$propertyStripped);
+						$params[] = $this->resolveValue($entityStripped,$propertyStripped,$value,null !== $type ? $type : null);
 					}
 				}
 				$clause .= ")";
