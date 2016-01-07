@@ -430,6 +430,12 @@ class Generator {
 					case 'ONE_TO_ONE':
 					case '<<ONE_TO_ONE':
 					case 'MANY_TO_ONE':
+						/// use
+						$useStringToBeAdded = "use WernerDweight\\Dobee\\LazyLoader\\SingleLazyLoader;";
+						/// check for duplicity
+						if(false === strpos($use,$useStringToBeAdded)){
+							$use .= $useStringToBeAdded."\n";
+						}
 						/// declaration
 						$class .= "\tprotected \$".$relatedEntity.";\n";
 						/// setter
@@ -439,11 +445,20 @@ class Generator {
 						$body .= "\t}\n\n";
 						/// getter
 						$body .= "\tpublic function get".ucfirst($relatedEntity)."(){\n";
+						$body .= "\t\tif(\$this->".$relatedEntity." instanceof SingleLazyLoader){\n";
+						$body .= "\t\t\t\$this->".$relatedEntity." = \$this->".$relatedEntity."->getData();\n";
+						$body .= "\t\t}\n";
 						$body .= "\t\treturn \$this->".$relatedEntity.";\n";
 						$body .= "\t}\n\n";
 						break;
 					case 'SELF::ONE_TO_MANY':
 					case 'SELF::MANY_TO_ONE':
+						/// use
+						$useStringToBeAdded = "use WernerDweight\\Dobee\\LazyLoader\\SingleLazyLoader;";
+						/// check for duplicity
+						if(false === strpos($use,$useStringToBeAdded)){
+							$use .= $useStringToBeAdded."\n";
+						}
 						/// declaration
 						$class .= "\tprotected \$parent".ucfirst($relatedEntity).";\n";
 						/// setter
@@ -453,6 +468,9 @@ class Generator {
 						$body .= "\t}\n\n";
 						/// getter
 						$body .= "\tpublic function getParent".ucfirst($relatedEntity)."(){\n";
+						$body .= "\t\tif(\$this->parent".ucfirst($relatedEntity)." instanceof SingleLazyLoader){\n";
+						$body .= "\t\t\t\$this->parent".ucfirst($relatedEntity)." = \$this->parent".ucfirst($relatedEntity)."->getData();\n";
+						$body .= "\t\t}\n";
 						$body .= "\t\treturn \$this->parent".ucfirst($relatedEntity).";\n";
 						$body .= "\t}\n\n";
 						/// no break here as we also need the 'to-many' methods
