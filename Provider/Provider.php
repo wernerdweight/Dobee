@@ -195,12 +195,18 @@ class Provider {
 						$types[] = $this->resolvePropertyStatementType($relatedEntity,$this->getPrimaryKeyForEntity($relatedEntity));
 						$params[] = $this->resolveValue($relatedEntity,$this->getPrimaryKeyForEntity($relatedEntity),$entity->{'getParent'.ucfirst($relatedEntity)}()->getPrimaryKey());
 					}
+					else{
+						$query .= "`".Transformer::camelCaseToUnderscore($relatedEntity)."_id` = NULL, ";
+					}
 				}
 				else if(in_array($cardinality,array('<<ONE_TO_ONE','MANY_TO_ONE'))){
 					if(!is_null($entity->{'get'.ucfirst($relatedEntity)}())){
 						$query .= "`".Transformer::camelCaseToUnderscore($relatedEntity)."_id` = ?, ";
 						$types[] = $this->resolvePropertyStatementType($relatedEntity,$this->getPrimaryKeyForEntity($relatedEntity));
 						$params[] = $this->resolveValue($relatedEntity,$this->getPrimaryKeyForEntity($relatedEntity),$entity->{'get'.ucfirst($relatedEntity)}()->getPrimaryKey());
+					}
+					else{
+						$query .= "`".Transformer::camelCaseToUnderscore($relatedEntity)."_id` = NULL, ";
 					}
 				}
 				else{	/// many-to-many owning side
