@@ -291,8 +291,8 @@ class Generator {
 						break;
 					case '<<MANY_TO_MANY':
 						$this->relationSql .= "CREATE TABLE `".Transformer::smurf(Transformer::camelCaseToUnderscore($currentEntity)."_MTM_".Transformer::camelCaseToUnderscore($entity))."` (\n";
-  						$this->relationSql .= "`".Transformer::camelCaseToUnderscore($currentEntity)."_id` int(11) NOT NULL,\n";
-  						$this->relationSql .= "`".Transformer::camelCaseToUnderscore($entity)."_id` int(11) NOT NULL\n";
+						$this->relationSql .= "`".Transformer::camelCaseToUnderscore($currentEntity)."_id` int(11) NOT NULL,\n";
+						$this->relationSql .= "`".Transformer::camelCaseToUnderscore($entity)."_id` int(11) NOT NULL\n";
 						$this->relationSql .= ") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;\n\n";
 						$this->relationSql .= "ALTER TABLE `".Transformer::smurf(Transformer::camelCaseToUnderscore($currentEntity)."_MTM_".Transformer::camelCaseToUnderscore($entity))."` ADD PRIMARY KEY (`".Transformer::camelCaseToUnderscore($currentEntity)."_id`,`".Transformer::camelCaseToUnderscore($entity)."_id`), ADD KEY `IDX_".Transformer::smurf(Transformer::camelCaseToUnderscore($currentEntity)."_MTM_".Transformer::camelCaseToUnderscore($entity))."` (`".Transformer::camelCaseToUnderscore($currentEntity)."_id`), ADD KEY `IDX_".Transformer::smurf(Transformer::camelCaseToUnderscore($entity)."_MTM_".Transformer::camelCaseToUnderscore($currentEntity))."` (`".Transformer::camelCaseToUnderscore($entity)."_id`);\n";
 						$this->relationSql .= "ALTER TABLE `".Transformer::smurf(Transformer::camelCaseToUnderscore($currentEntity)."_MTM_".Transformer::camelCaseToUnderscore($entity))."`\n";
@@ -489,7 +489,12 @@ class Generator {
 						$body .= "\tpublic function add".ucfirst($relatedEntity)."(".ucfirst($relatedEntity)." \$".$relatedEntity."){\n";
 						$body .= "\t\t/// check that items are loaded (if not load them)\n";
 						$body .= "\t\t\$this->load".ucfirst(Transformer::pluralize($relatedEntity))."();\n\n";
-						$body .= "\t\t\$this->".Transformer::pluralize($relatedEntity)."[\$".$relatedEntity."->get".ucfirst($this->getPrimaryKeyForEntity($relatedEntity))."()] = \$".$relatedEntity.";\n";
+						$body .= "\t\tif(null !== \$".$relatedEntity."->getId()){\n";
+						$body .= "\t\t\t\$this->".Transformer::pluralize($relatedEntity)."[\$".$relatedEntity."->get".ucfirst($this->getPrimaryKeyForEntity($relatedEntity))."()] = \$".$relatedEntity.";\n";
+						$body .= "\t\t}\n";
+						$body .= "\t\telse{\n";
+						$body .= "\t\t\t\$this->".Transformer::pluralize($relatedEntity)."[] = \$".$relatedEntity.";\n";
+						$body .= "\t\t}\n\n";
 						$body .= "\t\treturn \$this;\n";
 						$body .= "\t}\n\n";
 						$body .= "\tpublic function remove".ucfirst($relatedEntity)."(".ucfirst($relatedEntity)." \$".$relatedEntity."){\n";
