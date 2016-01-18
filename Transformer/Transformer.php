@@ -32,6 +32,8 @@ class Transformer {
 	}
 
 	public static function strip($string,$front = true){
+		/// remove trailing tilda-string (if any)
+		$string = preg_replace('/~.*$/','',$string);
 		/// get position of the separating dot
 		$pos = intval(strpos($string,'.'));
 		/// if there is a dot, strip string
