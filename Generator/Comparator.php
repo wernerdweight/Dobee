@@ -94,7 +94,7 @@ class Comparator {
 						$currentProperties = $this->currentSchema[$table][$column];
 						$newProperties = $this->newSchema[$table][$column];
 						foreach ($currentProperties as $property => $settings) {
-							if($currentProperties[$property] != $newProperties[$property]){
+							if($currentProperties[$property] != $newProperties[$property] && $property !== 'Key'){
 								$diff['columns']['change'][$table][$column] = $newProperties;
 							}
 						}
