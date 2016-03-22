@@ -488,7 +488,7 @@ class Generator {
 						/// setters
 						$body .= "\tpublic function add".ucfirst($relatedEntity)."(".ucfirst($relatedEntity)." \$".$relatedEntity."){\n";
 						$body .= "\t\tif(true === method_exists(\$this,'add".ucfirst($relatedEntity)."BeforeListener')){\n";
-						$body .= "\t\t\t\$this->add".ucfirst($relatedEntity)."BeforeListener();\n";
+						$body .= "\t\t\t\$this->add".ucfirst($relatedEntity)."BeforeListener(\$".$relatedEntity.");\n";
 						$body .= "\t\t}\n\n";
 						$body .= "\t\t/// check that items are loaded (if not load them)\n";
 						$body .= "\t\t\$this->load".ucfirst(Transformer::pluralize($relatedEntity))."();\n\n";
@@ -499,7 +499,7 @@ class Generator {
 						$body .= "\t\t\t\$this->".Transformer::pluralize($relatedEntity)."[] = \$".$relatedEntity.";\n";
 						$body .= "\t\t}\n\n";
 						$body .= "\t\tif(true === method_exists(\$this,'add".ucfirst($relatedEntity)."AfterListener')){\n";
-						$body .= "\t\t\t\$this->add".ucfirst($relatedEntity)."AfterListener();\n";
+						$body .= "\t\t\t\$this->add".ucfirst($relatedEntity)."AfterListener(\$".$relatedEntity.");\n";
 						$body .= "\t\t}\n\n";
 						$body .= "\t\treturn \$this;\n";
 						$body .= "\t}\n\n";
