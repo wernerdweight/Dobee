@@ -450,7 +450,10 @@ class Generator {
 						$body .= "\t\t\$this->".$relatedEntity." = \$".$relatedEntity.";\n";
 						/// if an abstract entity is the relation set discriminator value
 						if(true === array_key_exists('abstract',$this->model[$relatedEntity])){
-							$body .= "\t\t\$this->set".ucfirst($relatedEntity)."Class(get_class(\$".$relatedEntity."));\n";
+							$body .= "\t\tif(\$this->".$relatedEntity." instanceof SingleLazyLoader){\n";
+							$body .= "\t\t\t\$this->".$relatedEntity." = \$this->".$relatedEntity."->getData();\n";
+							$body .= "\t\t}\n";
+							$body .= "\t\t\$this->set".ucfirst($relatedEntity)."Class(get_class(\$this->".$relatedEntity."));\n";
 						}
 						$body .= "\t\treturn \$this;\n";
 						$body .= "\t}\n\n";

@@ -61,6 +61,7 @@ class Provider {
 		/// limit
 		$limit = " LIMIT 0,1";
 		/// fetch result
+		echo $select.$join.$where.$order.$limit;
 		$result = $this->execute($select.$join.$where.$order.$limit,$types,$params);
 
 		if(is_array($result) && count($result)){
@@ -630,11 +631,15 @@ class Provider {
 						case 'MANY_TO_ONE':
 							/// foreign key must be set and not null
 							if(isset($entityData[Transformer::camelCaseToUnderscore($relatedEntity).'_id']) && !is_null($entityData[Transformer::camelCaseToUnderscore($relatedEntity).'_id'])){
+								$owningEntity = null;
+								if(true === array_key_exists('abstract',$this->model[$relatedEntity])){
+									$owningEntity = lcfirst(substr($entityData[Transformer::camelCaseToUnderscore($relatedEntity).'_class'],strrpos($entityData[Transformer::camelCaseToUnderscore($relatedEntity).'_class'],'\\')+1));
+								}
 								/// set lazy-loader for single item
 								$entity->{'set'.ucfirst($relatedEntity)}(
 									new SingleLazyLoader(
 										$this,
-										$relatedEntity,
+										null !== $owningEntity ? $owningEntity : $relatedEntity,
 										$entityData[Transformer::camelCaseToUnderscore($relatedEntity).'_id']
 									)
 								);
