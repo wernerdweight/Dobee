@@ -48,18 +48,18 @@ trait ModelHelper {
 		return $properties;
 	}
 
-	protected function getEntityRelations($entity){
+	protected function getEntityRelations($entity,$owningOnly = true,$prefixWithEntityName = false){
 		$relations = array();
 
 		if(isset($this->model[$entity]['relations'])){
 			foreach ($this->model[$entity]['relations'] as $relatedEntity => $cardinality) {
-				if(in_array($cardinality, array('<<ONE_TO_ONE','MANY_TO_ONE','<<MANY_TO_MANY','SELF::ONE_TO_MANY','SELF::MANY_TO_ONE'))){
-					$relations[$relatedEntity] = $cardinality;
+				if($owningOnly !== true || in_array($cardinality, array('<<ONE_TO_ONE','MANY_TO_ONE','<<MANY_TO_MANY','SELF::ONE_TO_MANY','SELF::MANY_TO_ONE'))){
+					$relations[($prefixWithEntityName === true ? $entity.':' : '').$relatedEntity] = $cardinality;
 				}
 			}
 		}
 		if(isset($this->model[$entity]['extends'])){
-			$relations = array_merge($relations,$this->getEntityRelations($this->model[$entity]['extends']));
+			$relations = array_merge($relations,$this->getEntityRelations($this->model[$entity]['extends'],$owningOnly,$prefixWithEntityName));
 		}
 
 		return $relations;

@@ -196,7 +196,7 @@ class Provider {
 			}
 		}
 
-		$relations = $this->getEntityRelations($entityName);
+		$relations = $this->getEntityRelations($entityName,true);
 		if(count($relations)){
 			foreach ($relations as $relatedEntity => $cardinality) {
 				if(in_array($cardinality,array('SELF::MANY_TO_ONE','SELF::ONE_TO_MANY'))){
@@ -214,9 +214,19 @@ class Provider {
 						$query .= "`".Transformer::camelCaseToUnderscore($relatedEntity)."_id` = ?, ";
 						$types[] = $this->resolvePropertyStatementType($relatedEntity,$this->getPrimaryKeyForEntity($relatedEntity));
 						$params[] = $this->resolveValue($relatedEntity,$this->getPrimaryKeyForEntity($relatedEntity),$entity->{'get'.ucfirst($relatedEntity)}()->getPrimaryKey());
+						/// if an abstract entity is the relation add query for discriminator
+						if(true === array_key_exists('abstract',$this->model[$relatedEntity])){
+							$query .= "`".Transformer::camelCaseToUnderscore($relatedEntity)."_class` = ?, ";
+							$types[] = 's';
+							$params[] = $entity->{'get'.ucfirst($relatedEntity).'Class'}();
+						}
 					}
 					else{
 						$query .= "`".Transformer::camelCaseToUnderscore($relatedEntity)."_id` = NULL, ";
+						/// if an abstract entity is the relation add query for discriminator
+						if(true === array_key_exists('abstract',$this->model[$relatedEntity])){
+							$query .= "`".Transformer::camelCaseToUnderscore($relatedEntity)."_class` = NULL, ";
+						}
 					}
 				}
 				else{	/// many-to-many owning side
@@ -574,8 +584,12 @@ class Provider {
 				}
 			}
 			/// hydrate relations
-			if(isset($this->model[$entityName]['relations'])){
-				foreach ($this->model[$entityName]['relations'] as $relatedEntity => $cardinality) {
+			$relations = $this->getEntityRelations($entityName,false,true);
+			if(count($relations) > 0){
+				foreach ($relations as $relatedEntity => $cardinality) {
+					$pairs = explode(':',$relatedEntity);
+					$owningEntity = $pairs[0];
+					$relatedEntity = $pairs[1];
 					switch ($cardinality) {
 						case 'SELF::MANY_TO_ONE':
 						case 'SELF::ONE_TO_MANY':
@@ -598,7 +612,7 @@ class Provider {
 									$relatedEntity,
 									array(
 										'where' => array(
-											'this.'.Transformer::camelCaseToUnderscore($entityName).'_id' => array(
+											'this.'.Transformer::camelCaseToUnderscore($owningEntity).'_id' => array(
 												'operator' => 'eq',
 												'type' => $this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName)),
 												'value' => $entity->{'get'.ucfirst($this->getPrimaryKeyForEntity($entityName))}()
@@ -635,11 +649,17 @@ class Provider {
 									$relatedEntity,
 									array(
 										'where' => array(
-											'this.'.Transformer::camelCaseToUnderscore($entityName).'_id' => array(
+											'this.'.Transformer::camelCaseToUnderscore($owningEntity).'_id' => array(
 												'operator' => 'eq',
 												'type' => $this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName)),
 												'value' => $entity->{'get'.ucfirst($this->getPrimaryKeyForEntity($entityName))}()
-											)
+											),
+											'this.'.Transformer::camelCaseToUnderscore($owningEntity).'_class' => ($owningEntity !== $entityName ? array(
+													'operator' => 'eq',
+													'type' => 's',
+													'value' => get_class($entity)
+												)
+											: null)
 										),
 										'order' => array(
 											'this.'.Transformer::camelCaseToUnderscore($this->getDefaultOrderForEntity($relatedEntity)) => $this->getDefaultOrderForEntity($relatedEntity,false)

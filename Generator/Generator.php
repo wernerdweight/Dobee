@@ -286,8 +286,15 @@ class Generator {
 					case 'MANY_TO_MANY': break;		/// will be handled by <<MANY_TO_MANY
 					case '<<ONE_TO_ONE': case 'MANY_TO_ONE': case 'SELF::MANY_TO_ONE': case 'SELF::ONE_TO_MANY':
 						$this->tableSql .= "`".Transformer::camelCaseToUnderscore($entity)."_id` int(11) DEFAULT NULL,\n";
-						$this->relationSql .= "ALTER TABLE `".Transformer::smurf(Transformer::camelCaseToUnderscore($currentEntity))."` ADD CONSTRAINT `FK_".Transformer::smurf(Transformer::camelCaseToUnderscore($currentEntity))."_".Transformer::camelCaseToUnderscore($entity)."` FOREIGN KEY (`".Transformer::camelCaseToUnderscore($entity)."_id`) REFERENCES `".Transformer::smurf(Transformer::camelCaseToUnderscore($entity))."` (`".$this->getPrimaryKeyForEntity($entity)."`);\n";
-						$this->relationSql .= "\n";
+						/// inherited relations can't be constrained at database level
+						if(false === array_key_exists('abstract',$this->model[$entity])){
+							$this->relationSql .= "ALTER TABLE `".Transformer::smurf(Transformer::camelCaseToUnderscore($currentEntity))."` ADD CONSTRAINT `FK_".Transformer::smurf(Transformer::camelCaseToUnderscore($currentEntity))."_".Transformer::camelCaseToUnderscore($entity)."` FOREIGN KEY (`".Transformer::camelCaseToUnderscore($entity)."_id`) REFERENCES `".Transformer::smurf(Transformer::camelCaseToUnderscore($entity))."` (`".$this->getPrimaryKeyForEntity($entity)."`);\n";
+							$this->relationSql .= "\n";
+						}
+						/// if an abstract entity is the relation add discriminator column
+						else{
+							$this->tableSql .= "`".Transformer::camelCaseToUnderscore($entity)."_class` varchar(255) DEFAULT NULL,\n";
+						}
 						break;
 					case '<<MANY_TO_MANY':
 						$this->relationSql .= "CREATE TABLE `".Transformer::smurf(Transformer::camelCaseToUnderscore($currentEntity)."_MTM_".Transformer::camelCaseToUnderscore($entity))."` (\n";
@@ -441,6 +448,10 @@ class Generator {
 						/// setter
 						$body .= "\tpublic function set".ucfirst($relatedEntity)."(\$".$relatedEntity."){\n";
 						$body .= "\t\t\$this->".$relatedEntity." = \$".$relatedEntity.";\n";
+						/// if an abstract entity is the relation set discriminator value
+						if(true === array_key_exists('abstract',$this->model[$relatedEntity])){
+							$body .= "\t\t\$this->set".ucfirst($relatedEntity)."Class(get_class(\$".$relatedEntity."));\n";
+						}
 						$body .= "\t\treturn \$this;\n";
 						$body .= "\t}\n\n";
 						/// getter
@@ -450,6 +461,19 @@ class Generator {
 						$body .= "\t\t}\n";
 						$body .= "\t\treturn \$this->".$relatedEntity.";\n";
 						$body .= "\t}\n\n";
+						/// if an abstract entity is the relation add discriminator
+						if(true === array_key_exists('abstract',$this->model[$relatedEntity])){
+							$class .= "\tprotected \$".$relatedEntity."Class;\n";
+							/// setter
+							$body .= "\tpublic function set".ucfirst($relatedEntity)."Class(\$".$relatedEntity."Class){\n";
+							$body .= "\t\t\$this->".$relatedEntity."Class = \$".$relatedEntity."Class;\n";
+							$body .= "\t\treturn \$this;\n";
+							$body .= "\t}\n\n";
+							/// getter
+							$body .= "\tpublic function get".ucfirst($relatedEntity)."Class(){\n";
+							$body .= "\t\treturn \$this->".$relatedEntity."Class;\n";
+							$body .= "\t}\n\n";
+						}
 						break;
 					case 'SELF::ONE_TO_MANY':
 					case 'SELF::MANY_TO_ONE':
