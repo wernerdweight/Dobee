@@ -61,7 +61,6 @@ class Provider {
 		/// limit
 		$limit = " LIMIT 0,1";
 		/// fetch result
-		echo $select.$join.$where.$order.$limit;
 		$result = $this->execute($select.$join.$where.$order.$limit,$types,$params);
 
 		if(is_array($result) && count($result)){
