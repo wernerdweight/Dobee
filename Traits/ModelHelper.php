@@ -65,6 +65,16 @@ trait ModelHelper {
 		return $relations;
 	}
 
+	protected function getEntityJoinedColumnName($entity,$relatedEntity){
+		if(isset($this->model[$entity]['relations'][$relatedEntity])){
+			return $entity;
+		}
+		else if(isset($this->model[$entity]['extends'])){
+			return $this->getEntityJoinedColumnName($this->model[$entity]['extends'],$relatedEntity);
+		}
+		else return null;
+	}
+
 	protected function getDefaultOrderForEntity($entity,$returnProperty = true){
 		if(isset($this->model[$entity]['defaultOrderBy'])){
 			foreach ($this->model[$entity]['defaultOrderBy'] as $property => $direction) {

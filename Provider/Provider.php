@@ -456,7 +456,10 @@ class Provider {
 			foreach ($options['join'] as $relatedEntity => $name) {
 				$relatedEntityStripped = Transformer::strip($relatedEntity);
 				$relatedEntityOwner = str_replace('<<','',Transformer::strip($relatedEntity,false));
-				$cardinality = $this->model[$relatedEntityOwner === 'this' ? $entityName : $relatedEntityOwner]['relations'][$relatedEntityStripped];
+				/// check for existence here, if not existing, try entityName/relatedEntityOwner parent and add discriminator
+				$entityJoinedColumnName = $this->getEntityJoinedColumnName($relatedEntityOwner === 'this' ? $entityName : $relatedEntityOwner,$relatedEntityStripped);
+
+				$cardinality = $this->model[$relatedEntityOwner === 'this' ? $entityJoinedColumnName : $relatedEntityOwner]['relations'][$relatedEntityStripped];
 				$owning = (false !== strpos($cardinality,'<<') ? true : ($cardinality === 'MANY_TO_ONE' ? true : (false !== strpos($relatedEntity,'<<') ? true : false)));
 				if(false !== strpos($cardinality,'MANY_TO_MANY')){
 					/// M:N join
@@ -469,7 +472,12 @@ class Provider {
 				}
 				else{
 					/// one-to-many left join
-					$join .= " JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." `".Transformer::camelCaseToUnderscore($name)."` ON ".Transformer::camelCaseToUnderscore($name).".".Transformer::camelCaseToUnderscore($relatedEntityOwner === 'this' ? $entityName : $relatedEntityOwner)."_id = ".Transformer::camelCaseToUnderscore($relatedEntityOwner).".".$this->getPrimaryKeyForEntity($entityName);
+					$join .= " JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." `".Transformer::camelCaseToUnderscore($name)."` ON (".Transformer::camelCaseToUnderscore($name).".".Transformer::camelCaseToUnderscore($relatedEntityOwner === 'this' ? $entityName : $relatedEntityOwner)."_id = ".Transformer::camelCaseToUnderscore($relatedEntityOwner).".".$this->getPrimaryKeyForEntity($entityName);
+					if($entityName !== $entityJoinedColumnName){	/// inheritance mapping => add discriminator
+						$reflection = new \ReflectionClass($this->entityNamespace.'\\'.ucfirst($entityName));
+						$join .= " AND ".Transformer::camelCaseToUnderscore($name).".".Transformer::camelCaseToUnderscore($relatedEntityOwner === 'this' ? $entityJoinedColumnName : $relatedEntityOwner)."_class = '".str_replace('\\','\\\\',$reflection->getName())."'";
+					}
+					$join .= ")";
 				}
 			}
 		}
@@ -477,7 +485,10 @@ class Provider {
 			foreach ($options['leftJoin'] as $relatedEntity => $name) {
 				$relatedEntityStripped = Transformer::strip($relatedEntity);
 				$relatedEntityOwner = str_replace('<<','',Transformer::strip($relatedEntity,false));
-				$cardinality = $this->model[$relatedEntityOwner === 'this' ? $entityName : $relatedEntityOwner]['relations'][$relatedEntityStripped];
+				/// check for existence here, if not existing, try entityName/relatedEntityOwner parent and add discriminator
+				$entityJoinedColumnName = $this->getEntityJoinedColumnName($relatedEntityOwner === 'this' ? $entityName : $relatedEntityOwner,$relatedEntityStripped);
+
+				$cardinality = $this->model[$relatedEntityOwner === 'this' ? $entityJoinedColumnName : $relatedEntityOwner]['relations'][$relatedEntityStripped];
 				$owning = (false !== strpos($cardinality,'<<') ? true : ($cardinality === 'MANY_TO_ONE' ? true : (false !== strpos($relatedEntity,'<<') ? true : false)));
 				if(false !== strpos($cardinality,'MANY_TO_MANY')){
 					/// M:N left join
@@ -490,7 +501,12 @@ class Provider {
 				}
 				else{
 					/// one-to-many left join
-					$join .= " LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." `".Transformer::camelCaseToUnderscore($name)."` ON ".Transformer::camelCaseToUnderscore($name).".".Transformer::camelCaseToUnderscore($relatedEntityOwner === 'this' ? $entityName : $relatedEntityOwner)."_id = ".Transformer::camelCaseToUnderscore($relatedEntityOwner).".".$this->getPrimaryKeyForEntity($entityName);
+					$join .= " LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." `".Transformer::camelCaseToUnderscore($name)."` ON (".Transformer::camelCaseToUnderscore($name).".".Transformer::camelCaseToUnderscore($relatedEntityOwner === 'this' ? $entityJoinedColumnName : $relatedEntityOwner)."_id = ".Transformer::camelCaseToUnderscore($relatedEntityOwner).".".$this->getPrimaryKeyForEntity($entityName);
+					if($entityName !== $entityJoinedColumnName){	/// inheritance mapping => add discriminator
+						$reflection = new \ReflectionClass($this->entityNamespace.'\\'.ucfirst($entityName));
+						$join .= " AND ".Transformer::camelCaseToUnderscore($name).".".Transformer::camelCaseToUnderscore($relatedEntityOwner === 'this' ? $entityJoinedColumnName : $relatedEntityOwner)."_class = '".str_replace('\\','\\\\',$reflection->getName())."'";
+					}
+					$join .= ")";
 				}
 			}
 		}
