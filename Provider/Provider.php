@@ -532,6 +532,9 @@ class Provider {
 		if(isset($options['where']) && is_array($options['where']) && count($options['where'])){
 			$whereClauses = array();
 			foreach ($options['where'] as $propertyGroup => $settings) {
+				if(false === is_array($settings)){
+					continue;
+				}
 				/// property group can be e.g. 'this.id' or 'this.id|this.active|this.title' where '|'' stands for logical OR
 				$properties = explode('|',$propertyGroup);
 				$operators = explode('|',$settings['operator']);
