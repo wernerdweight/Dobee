@@ -318,14 +318,14 @@ class Provider {
 
 	protected function resolveValue($entityName,$property,$value,$type = null){
 		if(isset($this->model[$entityName]['properties']) && isset($this->model[$entityName]['properties'][$property])){
-			switch ($this->model[$entityName]['properties'][$property]['type']) {
+			switch (null !== $type ? $type : $this->model[$entityName]['properties'][$property]['type']) {
 				case 'bool': return intval($value);
-				case 'int': return intval($value);
-				case 'float': return doubleval($value);
-				case 'string': return $value;
+				case 'int': case 'i': return intval($value);
+				case 'float': case 'd': return doubleval($value);
+				case 'string': case 's': return $value;
 				case 'text': return $value;
 				case 'datetime': return $value;
-				default: throw new InvalidPropertyTypeException('"'.$this->model[$entityName]['properties'][$property]['type'].'" is not a valid property type!');
+				default: throw new InvalidPropertyTypeException('"'.(null !== $type ? $type : $this->model[$entityName]['properties'][$property]['type']).'" is not a valid property type!');
 			}
 		}
 		else if(isset($this->model[$entityName]['extends'])){
@@ -336,7 +336,7 @@ class Provider {
 				case 'i': return intval($value);
 				case 'd': return doubleval($value);
 				case 's': return $value;
-				default: throw new InvalidPropertyTypeException('"'.$this->model[$entityName]['properties'][$property]['type'].'" is not a valid property type!');
+				default: throw new InvalidPropertyTypeException('"'.$type.'" is not a valid property type!');
 			}
 		}
 		else return null;
