@@ -644,7 +644,6 @@ class Provider {
 								)
 							);
 							break;
-						case 'ONE_TO_ONE':
 						case '<<ONE_TO_ONE':
 						case 'MANY_TO_ONE':
 							/// foreign key must be set and not null
@@ -662,6 +661,32 @@ class Provider {
 									)
 								);
 							}
+							break;
+						case 'ONE_TO_ONE':
+							/// foreign key must be set and not null
+							$owningEntity = null;
+							if(true === array_key_exists('abstract',$this->model[$relatedEntity])){
+								$owningEntity = lcfirst(substr($entityData[Transformer::camelCaseToUnderscore($relatedEntity).'_class'],strrpos($entityData[Transformer::camelCaseToUnderscore($relatedEntity).'_class'],'\\')+1));
+							}
+							/// set lazy-loader for single item
+							$entity->{'set'.ucfirst($relatedEntity)}(
+								new SingleLazyLoader(
+									$this,
+									null !== $owningEntity ? $owningEntity : $relatedEntity,
+									null,
+									[
+										'leftJoin' => [
+											'this.'.$entityName => $entityName,
+										],
+										'where' => [
+											$entityName.'.'.$this->getPrimaryKeyForEntity($entityName) => [
+												'operator' => 'eq',
+												'value' => $entity->getPrimaryKey(),
+											]
+										],
+									]
+								)
+							);
 							break;
 						case 'ONE_TO_MANY':
 							/// set lazy-loader for multiple items
