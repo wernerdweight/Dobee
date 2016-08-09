@@ -9,17 +9,19 @@ class SingleLazyLoader {
     protected $provider;
     protected $entityName;
     protected $primaryKey;
+    protected $options;
     protected $data;
 
-    public function __construct(Provider $provider, $entityName, $primaryKey){
+    public function __construct(Provider $provider, $entityName, $primaryKey, $options = []){
         $this->provider = $provider;
         $this->entityName = $entityName;
         $this->primaryKey = $primaryKey;
+        $this->options = $options;
         $this->data = null;
     }
 
     protected function loadData(){
-        $this->data = $this->provider->fetchOne($this->entityName,$this->primaryKey);
+        $this->data = $this->provider->fetchOne($this->entityName,$this->primaryKey,$this->options);
     }
 
     public function getData(){
