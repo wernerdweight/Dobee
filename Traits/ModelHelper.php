@@ -97,4 +97,34 @@ trait ModelHelper {
 		return false;
 	}
 
+	protected function isEntityLoggable($entity){
+		if(array_key_exists('loggable',$this->model[$entity])){
+			return true;
+		}
+		else if(isset($this->model[$entity]['extends'])){
+			return $this->isEntityLoggable($this->model[$entity]['extends']);
+		}
+		return false;
+	}
+
+	protected function isEntityBlameable($entity){
+		if(array_key_exists('blameable',$this->model[$entity])){
+			return true;
+		}
+		else if(isset($this->model[$entity]['extends'])){
+			return $this->isEntityBlameable($this->model[$entity]['extends']);
+		}
+		return false;
+	}
+
+	protected function getEntityBlameable($entity){
+		if(isset($this->model[$entity]['blameable'])){
+			return $this->model[$entity]['blameable'];
+		}
+		else if(isset($this->model[$entity]['extends'])){
+			return $this->getEntityBlameable($this->model[$entity]['extends']);
+		}
+		return null;
+	}
+
 }

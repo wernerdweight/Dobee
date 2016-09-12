@@ -17,7 +17,7 @@ Installation
 ```js
 	{
 	    "require": {
-	        "wernerdweight/dobee": "0.2.*@dev"
+	        "wernerdweight/dobee": "~0.4"
 	    }
 	}
 ```
@@ -47,6 +47,11 @@ model:
     base:
         abstract: ~
         softDeletable: ~
+        loggable: ~
+        blameable:
+            targetEntity: author
+            property: authorId
+            nullValue: 0
         primary: id
         properties:
             id:
@@ -61,6 +66,9 @@ model:
                 type: bool
                 notNull: true
                 default: 0
+            authorId:
+                type: int
+                notNull: true
         defaultOrderBy:
             dateCreated: desc
     content:
@@ -143,11 +151,12 @@ Usage
 
 Generate database from YAML config:
 ```php
-		$options = array(
+		$options = [
 			'--dump',	/// outputs SQL for changes to be made to the database
 			'--force'	/// forces changes to the database and regenerates php classes
-			/// no more options available at the moment, you can use both options at once
-		);
+            '--generate-entities'   /// forces regeneration of entity classes even if no changes were made to the model (must be used together with --force)
+			/// no more options available at the moment
+		];
 		
 		$dobee->generate($options);
 

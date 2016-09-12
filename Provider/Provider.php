@@ -9,6 +9,7 @@ use WernerDweight\Dobee\Exception\UnknownOperationException;
 use WernerDweight\Dobee\Exception\InvalidPropertyTypeException;
 use WernerDweight\Dobee\LazyLoader\SingleLazyLoader;
 use WernerDweight\Dobee\LazyLoader\MultipleLazyLoader;
+use WernerDweight\Dobee\Provider\Changelog;
 
 class Provider {
 
@@ -17,11 +18,27 @@ class Provider {
 	protected $connection;
 	protected $entityNamespace;
 	protected $model;
+	protected $blame;
 
 	public function __construct($connection,$entityNamespace,$model){
 		$this->connection = $connection;
 		$this->entityNamespace = $entityNamespace;
 		$this->model = $model;
+	}
+
+	public function setBlame($blame){
+		$this->blame = $blame;
+		return $this;
+	}
+
+	public function fetchBlame($entity,$blame){
+		$blameable = $this->getEntityBlameable($entity);
+		if(true === isset($blameable['targetEntity'])){
+			return $this->fetchOne($blameable['targetEntity'],$blame);
+		}
+		else{
+			return null;
+		}
 	}
 
 	public function fetchOne($entityName,$primaryKey = null,$options = array()){
@@ -138,6 +155,126 @@ class Provider {
 		}
 	}
 
+	protected function prepareVersionData($entity){
+		$reflection = new \ReflectionClass($entity);
+		$properties = $reflection->getProperties();
+		$versionData = [];
+
+		if(count($properties) > 0){
+			foreach ($properties as $property) {
+				$property->setAccessible(true);
+				$value = $property->getValue($entity);
+				$name = $property->getName();
+
+				/// skip blame object
+				if($name === 'blame'){
+					continue;
+				}
+
+				if(is_object($value)){
+					/// skip changelog
+					if($value instanceof Changelog){
+						continue;
+					}
+					/// process single lazy-loaded object
+					else if($value instanceof SingleLazyLoader){
+						$versionData[$name] = [
+							'entity' => $name,
+							'id' => $value->getPrimaryKey(),
+						];
+					}
+					/// process multiple lazy-loaded objects
+					else if($value instanceof MultipleLazyLoader){
+						$value->loadData();
+						$value = $property->getValue($entity);
+						$versionData[$name] = [
+							'entity' => $name,
+							'id' => array_keys($value)
+						];
+					}
+					/// process other objects
+					else{
+						/// check wheter object is a mapped entity
+						if(true === method_exists($value,'getPrimaryKey')){
+							$versionData[$name] = [
+								'entity' => $name,
+								'id' => $value->getPrimaryKey(),
+							];
+						}
+						else{
+							$versionData[$name] = $value;
+						}
+					}
+				}
+				else if(is_array($value)){
+					if(count($value) > 0){
+						foreach ($value as $id => $item) {
+							if(true === method_exists($item,'getPrimaryKey')){
+								$versionData[$name] = [
+									'entity' => $name,
+									'id' => array_keys($value)
+								];
+							}
+							else{
+								$versionData[$name] = array_keys($value);
+							}
+							break;
+						}
+					}
+					else{
+						$versionData[$name] = array_keys($value);
+					}
+				}
+				else{
+					$versionData[$name] = $value;
+				}
+			}
+		}
+
+		return $versionData;
+	}
+
+	protected function log($actionType,$entity){
+		$entityName = $this->getEntityName($entity);
+		if(true === $this->isEntityLoggable($entityName)){
+			$entityId = $this->resolveValue($entityName,$this->getPrimaryKeyForEntity($entityName),$entity->getPrimaryKey());
+
+			/// get version number
+			$query = "SELECT version FROM `log_storage` WHERE entity_class = ? AND entity_id = ? ORDER BY version DESC LIMIT 0,1";
+			$types = ['s','s'];
+			$params = [
+				$entityName,
+				$entityId,
+			];
+			$result = $this->execute($query,$types,$params);
+			if(true === is_array($result) && count($result) > 0){
+				$version = intval($result[0]['version']) + 1;
+			}
+			else{
+				$version = 0;
+			}
+
+			$versionData = $this->prepareVersionData($entity);
+
+			/// create log query
+			$query = "INSERT INTO `log_storage` SET action_type = ?, blame = ?, entity_class = ?, entity_id = ?, version = ?, logged_at = NOW(), data = ?";
+			$types = ['s','s','s','s','i','s'];
+			$params = [
+				$actionType, /// action_type
+				$this->blame, /// blame
+				$entityName, /// entity_class
+				$entityId, /// entity_id
+				$version, /// version
+				serialize($versionData), /// data
+			];
+			$this->execute($query,$types,$params);
+			/// logged
+			return true;
+		}
+		/// nothing logged
+		return false;
+	}
+
 	protected function doUpdate($entity){
 		$types = array();
 		$params = array();
@@ -152,6 +289,9 @@ class Provider {
 
 		/// execute update
 		$this->execute($query,$types,$params);
+
+		/// log action
+		$this->log('update',$entity);
 	}
 
 	protected function doInsert($entity){
@@ -166,6 +306,9 @@ class Provider {
 		/// execute update
 		$this->execute($query,$types,$params);
 		$entity->setPrimaryKey($this->connection->insert_id);
+
+		/// log action
+		$this->log('create',$entity);
 	}
 
 	protected function doDelete($entity){
@@ -181,15 +324,27 @@ class Provider {
 
 		/// execute update
 		$this->execute($query,$types,$params);
+
+		/// log action
+		$this->log('delete',$entity);
 	}
 
 	protected function getSaveQueryBody($entity,$entityName,&$types,&$params){
 		$query = "";
 
+		/// set who to blame (author) if not yet set
+		if(true === $this->isEntityBlameable($entityName)){
+			$blameable = $this->getEntityBlameable($entityName);
+			$nullValue = (true === isset($blameable['nullValue']) ? $blameable['nullValue'] : null);
+			if($nullValue === $entity->{'get'.ucfirst($blameable['property'])}()){
+				$entity->{'set'.ucfirst($blameable['property'])}($this->blame);
+			}
+		}
+
 		$properties = $this->getEntityProperties($entityName);
 		if(count($properties)){
 			foreach ($properties as $property) {
-				if($this->getPrimaryKeyForEntity($entityName) == $property) continue;
+				if($this->getPrimaryKeyForEntity($entityName) == $property) continue;	/// skip primary key
 				$query .= "`".Transformer::camelCaseToUnderscore($property)."` = ?, ";
 				$types[] = $this->resolvePropertyStatementType($entityName,$property);
 				$params[] = $this->resolveValue($entityName,$property,$entity->{'get'.ucfirst($property)}());
@@ -359,7 +514,7 @@ class Provider {
 		}
 	}
 
-	protected function execute($query,$types,$params){
+	public function execute($query,$types,$params){
 		/// prepare statement
 		$statement = $this->connection->stmt_init();
 		if(!$statement->prepare($query)){
@@ -602,6 +757,37 @@ class Provider {
 					$entity->{'set'.Transformer::underscoreToCamelCase($property)}($value);
 				}
 			}
+
+			/// hydrate loggable
+			if(true === $this->isEntityLoggable($entityName)){
+				$entity->setChangelog(
+					new Changelog(
+						$this,
+						$entityName,
+						$entityData[lcfirst(Transformer::underscoreToCamelCase($this->getPrimaryKeyForEntity($entityName)))]
+					)
+				);
+			}
+
+			/// hydrate blameable
+			if(true === $this->isEntityBlameable($entityName)){
+				$blameable = $this->getEntityBlameable($entityName);
+				$nullValue = (true === isset($blameable['nullValue']) ? $blameable['nullValue'] : null);
+				if(true === isset($blameable['targetEntity'])){
+					/// blame must be set and not 'null' (null value can be configured)
+					if(isset($entityData[Transformer::camelCaseToUnderscore($blameable['property'])]) && $nullValue !== ($entityData[Transformer::camelCaseToUnderscore($blameable['property'])])){
+						/// set lazy-loader for single item
+						$entity->setBlame(
+							new SingleLazyLoader(
+								$this,
+								$blameable['targetEntity'],
+								$entityData[Transformer::camelCaseToUnderscore($blameable['property'])]
+							)
+						);
+					}
+				}
+			}
+
 			/// hydrate relations
 			$relations = $this->getEntityRelations($entityName,false,true);
 			if(count($relations) > 0){

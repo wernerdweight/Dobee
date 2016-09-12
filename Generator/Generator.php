@@ -38,12 +38,15 @@ class Generator {
 	}
 
 	public function generate($options){
+		echo "\033[1;31\033[41m\n\n DO NOT ABORT THIS ACTION! Your database could become inconsistent!\n\033[0m\n\n";
 		/// create sql queries based on yml model
 		$this->getSqlFromModel();
 		/// temporarily create new schema to compare it to the current one
+		echo "Determining changes...";
 		$this->force(true);
 		/// compare schemas and get changes
 		$diff = $this->comparator->compareSchemas();
+		echo " \033[32mOK\033[0m\n";
 		/// remove temporary tables
 		$this->removeTemporary();
 		/// refresh sql strings
@@ -58,25 +61,67 @@ class Generator {
 				echo $this->relationSql;
 			}
 			else{
-				echo "Nothing to update! Database is already in sync!\n";
+				echo "\033[1;34mNothing to update! Database is already in sync!\033[0m\n";
 			}
 		}
 		if(in_array('--force',$options)){
 			if(strlen($this->tableSql) || strlen($this->primarySql) || strlen($this->relationSql)){
+				echo "Applying changes...";
 				$this->force();
 				$this->generateEntities();
+				echo " \033[32mOK\033[0m\n";
 			}
 			else if(in_array('--generate-entities',$options)){
 				$this->generateEntities();
-				echo "Nothing to update! Entities were generated!\n";
+				echo "\033[1;34mNothing to update!\033[0m \033[32mEntities were re-generated!\033[0m\n";
 			}
 			else{
-				echo "Nothing to update! Database is already in sync!\n";
+				echo "\033[1;34mNothing to update! Database is already in sync!\033[0m\n";
 			}
 		}
 	}
 
+	protected function checkLogStorageExists(){
+		$storage = $this->connection->query("SHOW TABLES WHERE tables_in_".$this->database." = 'log_storage'");
+		if($storage->num_rows > 0){
+			return true;
+		}
+		else{
+			return false;
+		}
+	}
+
+	protected function createLogStorage(){
+		echo "Checking log storage...";
+		if(false === $this->checkLogStorageExists()){
+			echo " \033[33mWill be generated!\033[0m\n";
+
+			$this->tableSql .= "CREATE TABLE `log_storage` (\n";
+			$this->tableSql .= "`id` int(11) NOT NULL,\n";
+			$this->tableSql .= "`action_type` varchar(16) COLLATE utf8_unicode_ci NOT NULL,\n";
+			$this->tableSql .= "`blame` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,\n";
+			$this->tableSql .= "`entity_class` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n";
+			$this->tableSql .= "`entity_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n";
+			$this->tableSql .= "`version` int(11) NOT NULL,\n";
+			$this->tableSql .= "`logged_at` datetime NOT NULL,\n";
+			$this->tableSql .= "`data` longtext COLLATE utf8_unicode_ci\n";
+			$this->tableSql .= ") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;\n\n";
+
+			$this->primarySql .= "ALTER TABLE `log_storage` ADD PRIMARY KEY (`id`);\n";
+	  		$this->primarySql .= "ALTER TABLE `log_storage` MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;\n";
+	  		$this->primarySql .= "ALTER TABLE `log_storage` ADD KEY `log_storage_blame_lookup_idx` (`blame`);\n";
+	  		$this->primarySql .= "ALTER TABLE `log_storage` ADD KEY `log_storage_lookup_idx` (`entity_class`);\n";
+	  		$this->primarySql .= "ALTER TABLE `log_storage` ADD KEY `log_storage_date_lookup_idx` (`logged_at`);\n\n";
+	  	}
+	  	else{
+	  		echo " \033[32mOK\033[0m\n";
+	  	}
+	}
+
 	protected function getSqlFromModel(){
+		/// create table for storing changelogs for configured entities
+		$this->createLogStorage();
+		/// create entity and relation tables
 		foreach ($this->model as $entity => $attributes) {
 			if(!array_key_exists('abstract',$attributes)){
 				$this->getSqlForEntity($entity);
@@ -158,7 +203,9 @@ class Generator {
 		
 		if(count($diff['tables']['drop'])){
 			foreach ($diff['tables']['drop'] as $key => $table) {
-				$this->tableSql .= "DROP TABLE `".$table."`;\n\n";
+				if($table !== 'log_storage'){
+					$this->tableSql .= "DROP TABLE `".$table."`;\n\n";
+				}
 			}
 		}
 
@@ -425,6 +472,56 @@ class Generator {
 			}
 		}
 
+		/// loggable
+		if(true === isset($this->model[$entityName]['blameable'])){
+			if(true === isset($this->model[$entityName]['blameable']['targetEntity'])){
+				/// use
+				$useStringToBeAdded = "use WernerDweight\\Dobee\\Provider\\Changelog;";
+				/// check for duplicity
+				if(false === strpos($use,$useStringToBeAdded)){
+					$use .= $useStringToBeAdded."\n";
+				}
+				/// declaration
+				$class .= "\tprotected \$changelog;\n";
+				/// setter
+				$body .= "\tpublic function setChangelog(Changelog \$changelog){\n";
+				$body .= "\t\t\$this->changelog = \$changelog;\n";
+				$body .= "\t\treturn \$this;\n";
+				$body .= "\t}\n\n";
+				/// getter
+				$body .= "\tpublic function getChangelog(){\n";
+				$body .= "\t\treturn \$this->changelog;\n";
+				$body .= "\t}\n\n";
+			}
+		}
+
+		/// blameable
+		if(true === isset($this->model[$entityName]['blameable'])){
+			if(true === isset($this->model[$entityName]['blameable']['targetEntity'])){
+				/// use
+				$useStringToBeAdded = "use WernerDweight\\Dobee\\LazyLoader\\SingleLazyLoader;";
+				/// check for duplicity
+				if(false === strpos($use,$useStringToBeAdded)){
+					$use .= $useStringToBeAdded."\n";
+				}
+				/// declaration
+				$class .= "\tprotected \$blame;\n";
+				/// setter
+				$body .= "\tpublic function setBlame(\$blame){\n";
+				$body .= "\t\t\$this->blame = \$blame;\n";
+				$body .= "\t\treturn \$this;\n";
+				$body .= "\t}\n\n";
+				/// getter
+				$body .= "\tpublic function getBlame(){\n";
+				$body .= "\t\tif(\$this->blame instanceof SingleLazyLoader){\n";
+				$body .= "\t\t\t\$this->blame = \$this->blame->getData();\n";
+				$body .= "\t\t}\n";
+				$body .= "\t\treturn \$this->blame;\n";
+				$body .= "\t}\n\n";
+			}
+		}
+
+		/// relations
 		if(isset($this->model[$entityName]['relations'])){
 			foreach ($this->model[$entityName]['relations'] as $relatedEntity => $cardinality) {
 				/// use
