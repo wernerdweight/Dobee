@@ -336,7 +336,7 @@ class Provider {
 		if(true === $this->isEntityBlameable($entityName)){
 			$blameable = $this->getEntityBlameable($entityName);
 			$nullValue = (true === isset($blameable['nullValue']) ? $blameable['nullValue'] : null);
-			if($nullValue === $entity->{'get'.ucfirst($blameable['property'])}()){
+			if($nullValue === $entity->{'get'.ucfirst($blameable['property'])}() || null === $entity->{'get'.ucfirst($blameable['property'])}()){
 				$entity->{'set'.ucfirst($blameable['property'])}($this->blame);
 			}
 		}
