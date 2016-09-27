@@ -290,6 +290,9 @@ class Provider {
 		/// execute update
 		$this->execute($query,$types,$params);
 
+		/// many-to-many relations
+		$this->saveManyToManyRelations($entity,$entityName);
+
 		/// log action
 		$this->log('update',$entity);
 	}
@@ -306,6 +309,9 @@ class Provider {
 		/// execute update
 		$this->execute($query,$types,$params);
 		$entity->setPrimaryKey($this->connection->insert_id);
+
+		/// many-to-many relations
+		$this->saveManyToManyRelations($entity,$entityName);
 
 		/// log action
 		$this->log('create',$entity);
@@ -384,7 +390,21 @@ class Provider {
 						}
 					}
 				}
-				else{	/// many-to-many owning side
+			}
+		}
+
+		if(strlen($query) > 0){
+			$query = substr($query,0,-2);
+		}
+
+		return $query;
+	}
+
+	protected function saveManyToManyRelations($entity,$entityName){
+		$relations = $this->getEntityRelations($entityName,true);
+		if(count($relations)){
+			foreach ($relations as $relatedEntity => $cardinality) {
+				if(false === in_array($cardinality,array('SELF::MANY_TO_ONE','SELF::ONE_TO_MANY','<<ONE_TO_ONE','MANY_TO_ONE'))){
 					/// fetch current relations from database
 					$currentRelationsResult = $this->execute(
 						"SELECT * FROM `".Transformer::smurf(Transformer::camelCaseToUnderscore($entityName).'_mtm_'.Transformer::camelCaseToUnderscore($relatedEntity))."` WHERE ".Transformer::camelCaseToUnderscore($entityName)."_id = ?",
@@ -447,12 +467,6 @@ class Provider {
 				}
 			}
 		}
-
-		if(strlen($query) > 0){
-			$query = substr($query,0,-2);
-		}
-
-		return $query;
 	}
 
 	protected function resolveOperation($operator){
