@@ -926,7 +926,7 @@ class Provider {
 									$relatedEntity,
 									array(
 										'leftJoin' => array(
-											'this.'.Transformer::camelCaseToUnderscore($entityName) => Transformer::camelCaseToUnderscore($entityName)
+											'this.'.$entityName => $entityName
 										),
 										'where' => array(
 											$entityName.'.'.$this->getPrimaryKeyForEntity($entityName) => array(
