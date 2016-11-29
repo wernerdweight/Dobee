@@ -733,6 +733,9 @@ class Provider {
 					else{
 						$type = null;
 					}
+					if(null !== $type && empty($type)){
+						$type = -1;
+					}
 
 					$clause .= Transformer::camelCaseToUnderscore($property)." ".$this->resolveOperation($operator);
 					if(strpos($clause,'?') !== false){
@@ -741,8 +744,10 @@ class Provider {
 						if($entityStripped === 'this'){
 							$entityStripped = $entityName;
 						}
-						$types[] = null !== $type ? $type : $this->resolvePropertyStatementType($entityStripped,$propertyStripped);
-						$params[] = $this->resolveValue($entityStripped,$propertyStripped,$value,null !== $type ? $type : null);
+						if($type !== -1){
+							$types[] = null !== $type ? $type : $this->resolvePropertyStatementType($entityStripped,$propertyStripped);
+							$params[] = $this->resolveValue($entityStripped,$propertyStripped,$value,null !== $type ? $type : null);
+						}
 					}
 				}
 				$clause .= ")";
