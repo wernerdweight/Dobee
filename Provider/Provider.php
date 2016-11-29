@@ -681,14 +681,18 @@ class Provider {
 		}
 		if(isset($options['plainJoin']) && is_array($options['plainJoin'])){
 			foreach ($options['plainJoin'] as $relatedEntity => $settings) {
+				$relatedEntityStripped = Transformer::strip($relatedEntity);
 				$relatedEntityOwner = str_replace('<<','',Transformer::strip($relatedEntity,false));
-				$join .= " JOIN ".$relatedEntity." `".Transformer::camelCaseToUnderscore($settings['name'])."` ON ".Transformer::camelCaseToUnderscore($relatedEntityOwner).".".$settings['entityKey']." = ".Transformer::camelCaseToUnderscore($settings['name']).".".$settings['relatedEntityKey'];
+
+				$join .= " JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." `".Transformer::camelCaseToUnderscore($settings['name'])."` ON ".Transformer::camelCaseToUnderscore($relatedEntityOwner).".".$settings['entityKey']." = ".Transformer::camelCaseToUnderscore($settings['name']).".".$settings['relatedEntityKey'];
 			}
 		}
 		if(isset($options['plainLeftJoin']) && is_array($options['plainLeftJoin'])){
 			foreach ($options['plainLeftJoin'] as $relatedEntity => $settings) {
+				$relatedEntityStripped = Transformer::strip($relatedEntity);
 				$relatedEntityOwner = str_replace('<<','',Transformer::strip($relatedEntity,false));
-				$join .= " LEFT JOIN ".$relatedEntity." `".Transformer::camelCaseToUnderscore($settings['name'])."` ON ".Transformer::camelCaseToUnderscore($relatedEntityOwner).".".$settings['entityKey']." = ".Transformer::camelCaseToUnderscore($settings['name']).".".$settings['relatedEntityKey'];
+
+				$join .= " LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." `".Transformer::camelCaseToUnderscore($settings['name'])."` ON ".Transformer::camelCaseToUnderscore($relatedEntityOwner).".".$settings['entityKey']." = ".Transformer::camelCaseToUnderscore($settings['name']).".".$settings['relatedEntityKey'];
 			}
 		}
 
