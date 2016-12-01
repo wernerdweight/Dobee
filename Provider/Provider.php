@@ -659,7 +659,12 @@ class Provider {
 
 				$cardinality = $this->model[$relatedEntityOwner === 'this' ? $entityJoinedColumnName : $relatedEntityOwner]['relations'][$relatedEntityStripped];
 				$owning = (false !== strpos($cardinality,'<<') ? true : ($cardinality === 'MANY_TO_ONE' ? true : (false !== strpos($relatedEntity,'<<') ? true : false)));
-				if(false !== strpos($cardinality,'MANY_TO_MANY')){
+				if($cardinality === 'SELF::MANY_TO_MANY'){
+					/// M:N left join
+					$mtmTableName = Transformer::smurf(Transformer::camelCaseToUnderscore($entityJoinedColumnName)).'_mtm_'.Transformer::camelCaseToUnderscore($relatedEntityStripped);
+					$join .= " LEFT JOIN ".$mtmTableName." `".$mtmTableName."` ON ".Transformer::camelCaseToUnderscore($relatedEntityOwner).".".$this->getPrimaryKeyForEntity($entityJoinedColumnName)." = ".$mtmTableName.".".($owning ? 'master_' : 'slave_').Transformer::camelCaseToUnderscore($entityJoinedColumnName)."_id LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." `".Transformer::camelCaseToUnderscore($name)."` ON ".$mtmTableName.".".($owning ? 'slave_' : 'master_').Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
+				}
+				else if(false !== strpos($cardinality,'MANY_TO_MANY')){
 					/// M:N left join
 					$mtmTableName = ($owning ? Transformer::smurf(Transformer::camelCaseToUnderscore($entityJoinedColumnName)).'_mtm_'.Transformer::camelCaseToUnderscore($relatedEntityStripped) : Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped)).'_mtm_'.Transformer::camelCaseToUnderscore($entityJoinedColumnName));
 					$join .= " LEFT JOIN ".$mtmTableName." `".$mtmTableName."` ON ".Transformer::camelCaseToUnderscore($relatedEntityOwner).".".$this->getPrimaryKeyForEntity($entityJoinedColumnName)." = ".$mtmTableName.".".Transformer::camelCaseToUnderscore($entityJoinedColumnName)."_id LEFT JOIN ".Transformer::smurf(Transformer::camelCaseToUnderscore($relatedEntityStripped))." `".Transformer::camelCaseToUnderscore($name)."` ON ".$mtmTableName.".".Transformer::camelCaseToUnderscore($relatedEntityStripped)."_id = ".Transformer::camelCaseToUnderscore($name).".".$this->getPrimaryKeyForEntity($relatedEntityStripped);
@@ -947,6 +952,57 @@ class Provider {
 											'this.'.Transformer::camelCaseToUnderscore($this->getDefaultOrderForEntity($relatedEntity)) => $this->getDefaultOrderForEntity($relatedEntity,false)
 										)
 									)
+								)
+							);
+							break;
+						case 'SELF::MANY_TO_MANY':
+							/// set lazy-loader for multiple items with many-to-many loading
+							$entity->{'setMaster'.ucfirst(Transformer::pluralize($relatedEntity))}(
+								new MultipleLazyLoader(
+									$this,
+									$entity,
+									$relatedEntity,
+									array(
+										'leftJoin' => array(
+											'this.'.$entityName => $entityName
+										),
+										'where' => array(
+											$entityName.'.'.$this->getPrimaryKeyForEntity($entityName) => array(
+												'operator' => 'eq',
+												'value' => $entity->{'get'.ucfirst($this->getPrimaryKeyForEntity($entityName))}()
+											)
+										),
+										'order' => array(
+											'this.'.Transformer::camelCaseToUnderscore($this->getDefaultOrderForEntity($relatedEntity)) => $this->getDefaultOrderForEntity($relatedEntity,false)
+										)
+									),
+									[
+										'prefix' => 'Master',
+									]
+								)
+							);
+							$entity->{'setSlave'.ucfirst(Transformer::pluralize($relatedEntity))}(
+								new MultipleLazyLoader(
+									$this,
+									$entity,
+									$relatedEntity,
+									array(
+										'leftJoin' => array(
+											'<<this.'.$entityName => $entityName
+										),
+										'where' => array(
+											$entityName.'.'.$this->getPrimaryKeyForEntity($entityName) => array(
+												'operator' => 'eq',
+												'value' => $entity->{'get'.ucfirst($this->getPrimaryKeyForEntity($entityName))}()
+											)
+										),
+										'order' => array(
+											'this.'.Transformer::camelCaseToUnderscore($this->getDefaultOrderForEntity($relatedEntity)) => $this->getDefaultOrderForEntity($relatedEntity,false)
+										)
+									),
+									[
+										'prefix' => 'Slave',
+									]
 								)
 							);
 							break;
