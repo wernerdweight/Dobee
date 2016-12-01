@@ -151,6 +151,7 @@ class Dobee {
 			'<<MANY_TO_MANY',
 			'SELF::MANY_TO_ONE',
 			'SELF::ONE_TO_MANY',
+			'SELF::MANY_TO_MANY',
 		);
 	}
 

@@ -53,7 +53,7 @@ trait ModelHelper {
 
 		if(isset($this->model[$entity]['relations'])){
 			foreach ($this->model[$entity]['relations'] as $relatedEntity => $cardinality) {
-				if($owningOnly !== true || in_array($cardinality, array('<<ONE_TO_ONE','MANY_TO_ONE','<<MANY_TO_MANY','SELF::ONE_TO_MANY','SELF::MANY_TO_ONE'))){
+				if($owningOnly !== true || in_array($cardinality, array('<<ONE_TO_ONE','MANY_TO_ONE','<<MANY_TO_MANY','SELF::ONE_TO_MANY','SELF::MANY_TO_ONE','SELF::MANY_TO_MANY'))){
 					$relations[($prefixWithEntityName === true ? $entity.':' : '').$relatedEntity] = $cardinality;
 				}
 			}
