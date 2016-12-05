@@ -19,7 +19,7 @@
     ],
 
     "require": {
-        "php": ">=5.3.3"
+        "php": ">=5.6.0"
     },
 
     "require-dev": {},
@@ -32,11 +32,6 @@
         }
     },
 
-    "target-dir": "WernerDweight/Dobee",
+    "target-dir": "WernerDweight/Dobee"
 
-    "extra": {
-        "branch-alias": {
-            "dev-master": "0.3-dev"
-        }
-    }
 }

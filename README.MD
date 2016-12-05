@@ -7,7 +7,7 @@ Werner Dweight's Dobee
 > quite a lot of code is still missing! Usage of this utility is discouraged
 > until the version 1.0 is released!
 
-This utility provides lightweight solution for handling your app model - all you create is a YAML configuration file of your model and Dobee will do the rest (create database, generate php classes for your entites and let you query for them, it can also handle updates to your model and basic inheritance).
+This utility provides lightweight solution for handling your app model - all you create is a YAML configuration file of your model and Dobee will do the rest (create database, generate php classes for your entites and let you query for them, it can also handle updates to your model and basic inheritance). It is not recommended to use Dobee for huge projects as you would likely reach the limits.
 
 Installation
 ------------
@@ -17,7 +17,7 @@ Installation
 ```js
 	{
 	    "require": {
-	        "wernerdweight/dobee": "~0.4"
+	        "wernerdweight/dobee": "~0.5"
 	    }
 	}
 ```
