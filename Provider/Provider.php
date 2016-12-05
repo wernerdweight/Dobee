@@ -404,7 +404,68 @@ class Provider {
 		$relations = $this->getEntityRelations($entityName,true);
 		if(count($relations)){
 			foreach ($relations as $relatedEntity => $cardinality) {
-				if(false === in_array($cardinality,array('SELF::MANY_TO_ONE','SELF::ONE_TO_MANY','<<ONE_TO_ONE','MANY_TO_ONE'))){
+				if($cardinality === 'SELF::MANY_TO_MANY'){
+					/// fetch current relations from database
+					$currentRelationsResult = $this->execute(
+						"SELECT * FROM `".Transformer::smurf(Transformer::camelCaseToUnderscore($entityName).'_mtm_'.Transformer::camelCaseToUnderscore($relatedEntity))."` WHERE master_".Transformer::camelCaseToUnderscore($entityName)."_id = ?",
+						array(
+							$this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName))
+						),
+						array(
+							$entity->getPrimaryKey()
+						)
+					);
+					$currentRelations = array();
+					if(is_array($currentRelationsResult) && count($currentRelationsResult)){
+						foreach ($currentRelationsResult as $rowData) {
+							$currentRelations[$rowData['slave_'.Transformer::camelCaseToUnderscore($relatedEntity).'_id']] = $rowData['slave_'.Transformer::camelCaseToUnderscore($relatedEntity).'_id'];
+						}
+					}
+					/// get relations as set during business logic operation
+					$notPersistedRelations = array();
+					if(count($entity->{'getSlave'.ucfirst(Transformer::pluralize($relatedEntity))}())){
+						foreach ($entity->{'getSlave'.ucfirst(Transformer::pluralize($relatedEntity))}() as $key => $relatedItem) {
+							$notPersistedRelations[$relatedItem->getPrimaryKey()] = $relatedItem->getPrimaryKey();
+						}
+					}
+					/// check for removed relations (and remove them from database)
+					if(count($currentRelations)){
+						foreach ($currentRelations as $key => $id) {
+							if(!array_key_exists($id,$notPersistedRelations)){
+								$this->execute(
+									"DELETE FROM `".Transformer::smurf(Transformer::camelCaseToUnderscore($entityName).'_mtm_'.Transformer::camelCaseToUnderscore($relatedEntity))."` WHERE master_".Transformer::camelCaseToUnderscore($entityName)."_id = ? AND slave_".Transformer::camelCaseToUnderscore($relatedEntity)."_id = ?",
+									array(
+										$this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName)),
+										$this->resolvePropertyStatementType($relatedEntity,$this->getPrimaryKeyForEntity($relatedEntity))
+									),
+									array(
+										$entity->getPrimaryKey(),
+										$key
+									)
+								);
+							}
+						}
+					}
+					/// check for new relations (and add them to database)
+					if(count($notPersistedRelations)){
+						foreach ($notPersistedRelations as $key => $id) {
+							if(!array_key_exists($id,$currentRelations)){
+								$this->execute(
+									"INSERT INTO `".Transformer::smurf(Transformer::camelCaseToUnderscore($entityName).'_mtm_'.Transformer::camelCaseToUnderscore($relatedEntity))."` SET master_".Transformer::camelCaseToUnderscore($entityName)."_id = ?, slave_".Transformer::camelCaseToUnderscore($relatedEntity)."_id = ?",
+									array(
+										$this->resolvePropertyStatementType($entityName,$this->getPrimaryKeyForEntity($entityName)),
+										$this->resolvePropertyStatementType($relatedEntity,$this->getPrimaryKeyForEntity($relatedEntity))
+									),
+									array(
+										$entity->getPrimaryKey(),
+										$key
+									)
+								);
+							}
+						}
+					}
+				}
+				else if(false === in_array($cardinality,array('SELF::MANY_TO_ONE','SELF::ONE_TO_MANY','<<ONE_TO_ONE','MANY_TO_ONE'))){
 					/// fetch current relations from database
 					$currentRelationsResult = $this->execute(
 						"SELECT * FROM `".Transformer::smurf(Transformer::camelCaseToUnderscore($entityName).'_mtm_'.Transformer::camelCaseToUnderscore($relatedEntity))."` WHERE ".Transformer::camelCaseToUnderscore($entityName)."_id = ?",
@@ -964,7 +1025,7 @@ class Provider {
 									$relatedEntity,
 									array(
 										'leftJoin' => array(
-											'this.'.$entityName => $entityName
+											'<<this.'.$entityName => $entityName
 										),
 										'where' => array(
 											$entityName.'.'.$this->getPrimaryKeyForEntity($entityName) => array(
@@ -988,7 +1049,7 @@ class Provider {
 									$relatedEntity,
 									array(
 										'leftJoin' => array(
-											'<<this.'.$entityName => $entityName
+											'this.'.$entityName => $entityName
 										),
 										'where' => array(
 											$entityName.'.'.$this->getPrimaryKeyForEntity($entityName) => array(

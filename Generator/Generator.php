@@ -137,8 +137,8 @@ class Generator {
 				$colNames = array_keys($columns);
 				$relationSql .= "ALTER TABLE `".$table."` ADD PRIMARY KEY (`".$colNames[0]."`,`".$colNames[1]."`), ADD KEY `IDX_".preg_replace('/_id$/','',$colNames[0])."_MTM_".preg_replace('/_id$/','',$colNames[1])."` (`".$colNames[0]."`), ADD KEY `IDX_".preg_replace('/_id$/','',$colNames[1])."_MTM_".preg_replace('/_id$/','',$colNames[0])."` (`".$colNames[1]."`);\n";
 				$relationSql .= "ALTER TABLE `".$table."`\n";
-				$relationSql .= "ADD CONSTRAINT `FK_".preg_replace('/_id$/','',$colNames[0])."_MTM_".preg_replace('/_id$/','',$colNames[1])."` FOREIGN KEY (`".$colNames[0]."`) REFERENCES `".Transformer::smurf(preg_replace('/_id$/','',$colNames[0]))."` (`id`),\n";
-				$relationSql .= "ADD CONSTRAINT `FK_".preg_replace('/_id$/','',$colNames[1])."_MTM_".preg_replace('/_id$/','',$colNames[0])."` FOREIGN KEY (`".$colNames[1]."`) REFERENCES `".Transformer::smurf(preg_replace('/_id$/','',$colNames[1]))."` (`id`);\n";
+				$relationSql .= "ADD CONSTRAINT `FK_".preg_replace('/_id$/','',$colNames[0])."_MTM_".preg_replace('/_id$/','',$colNames[1])."` FOREIGN KEY (`".$colNames[0]."`) REFERENCES `".Transformer::smurf(preg_replace('/^(master_|slave_)/','',preg_replace('/_id$/','',$colNames[0])))."` (`id`),\n";
+				$relationSql .= "ADD CONSTRAINT `FK_".preg_replace('/_id$/','',$colNames[1])."_MTM_".preg_replace('/_id$/','',$colNames[0])."` FOREIGN KEY (`".$colNames[1]."`) REFERENCES `".Transformer::smurf(preg_replace('/^(master_|slave_)/','',preg_replace('/_id$/','',$colNames[1])))."` (`id`);\n";
 				$relationSql .= "\n";
 				/// add sql for second column
 				$tableSql .= "`".$columns[$colNames[1]]['Field']."` ".$columns[$colNames[1]]['Type'].(isset($columns[$colNames[1]]['Null']) && $columns[$colNames[1]]['Null'] == 'NO' ? " NOT NULL" : "").(isset($columns[$colNames[1]]['Default']) ? " DEFAULT ".$columns[$colNames[1]]['Default'] : (isset($columns[$colNames[1]]['Null']) && $columns[$colNames[1]]['Null'] == 'NO' ? "" : " DEFAULT NULL")).",\n";
