@@ -777,7 +777,12 @@ class Provider {
 				/// property group can be e.g. 'this.id' or 'this.id|this.active|this.title' where '|'' stands for logical OR
 				$properties = explode('|',$propertyGroup);
 				$operators = explode('|',$settings['operator']);
-				$values = explode('|',$settings['value']);
+				if(false === is_array($settings['value'])){
+					$values = explode('|',$settings['value']);
+				}
+				else{
+					$values = $settings['value'];
+				}
 				if(isset($settings['type'])){
 					$typesets = explode('|',$settings['type']);
 				}
@@ -792,7 +797,9 @@ class Provider {
 					}
 
 					$operator = count($operators) > 1 ? $operators[$key] : $operators[0];
-					$value = count($values) > 1 ? $values[$key] : $values[0];
+					if(false === is_array($settings['value'])){
+						$value = count($values) > 1 ? $values[$key] : $values[0];
+					}
 					if(null !== $typesets){
 						$type = count($typesets) > 1 ? $typesets[$key] : $typesets[0];
 					}
@@ -804,7 +811,22 @@ class Provider {
 					}
 
 					$clause .= Transformer::camelCaseToUnderscore($property)." ".$this->resolveOperation($operator);
-					if(strpos($clause,'?') !== false){
+					/// handle IN operator (that takes array as parameter)
+					if(true === in_array($operator, ['~','in']) && is_array($values)){
+						$clause = str_replace('IN (?)','IN('.(function() use ($values) {
+							$str = '';
+							for ($i=0; $i < count($values); $i++) {
+								$str .= ($i == 0 ? '' : ',').'?';
+							}
+							return $str;
+						})().')',$clause);
+						foreach ($values as $key => $value) {
+							$types[] = null !== $type ? $type : $this->resolvePropertyStatementType($entityStripped,$propertyStripped);
+							$params[] = $this->resolveValue($entityStripped,$propertyStripped,$value,null !== $type ? $type : null);
+						}
+					}
+					/// handle all other operators
+					else if(strpos($clause,'?') !== false){
 						$propertyStripped = Transformer::strip($property);
 						$entityStripped = Transformer::strip($property,false);
 						if($entityStripped === 'this'){
