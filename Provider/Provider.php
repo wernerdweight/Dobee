@@ -602,10 +602,10 @@ class Provider {
 					$statement,
 					'bind_param'
 				),
-				array_merge(
+				$this->getArrayAsReferences(array_merge(
 					array(implode('',$types)),
-					$this->getArrayAsReferences($params)
-				)
+					$params
+				))
 			);
 		}
 		/// execute statement
