@@ -1110,4 +1110,8 @@ class Provider {
 		return $references;
 	}
 
+	public function entityExists($entity) {
+		return isset($this->model[$entity]);
+	}
+
 }
