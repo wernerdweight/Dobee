@@ -540,6 +540,7 @@ class Provider {
 			case '<=': case 'lte': return '<= ?';
 			case '%%': case 'like': return 'LIKE ?';
 			case '~': case 'in': return 'IN (?)';
+			case '!~': case 'nin': return 'NOT IN (?)';
 			case '0': case 'null': return 'IS NULL';
 			case '!0': case 'nn': return 'IS NOT NULL';
 			default: throw new UnknownOperationException('Operator "'.$operator.'" is unknown!');
@@ -812,7 +813,7 @@ class Provider {
 
 					$clause .= Transformer::camelCaseToUnderscore($property)." ".$this->resolveOperation($operator);
 					/// handle IN operator (that takes array as parameter)
-					if(true === in_array($operator, ['~','in']) && is_array($values)){
+					if(true === in_array($operator, ['~','in','!~','nin']) && is_array($values)){
 						$clause = str_replace('IN (?)','IN('.(function() use ($values) {
 							$str = '';
 							for ($i=0; $i < count($values); $i++) {
